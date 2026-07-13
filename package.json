@@ -1,0 +1,17 @@
+{
+  "name": "harbor-guardians",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Harbor Guardians — standalone city-builder × RPG hybrid. Milestone 0 scaffold.",
+  "type": "module",
+  "packageManager": "pnpm@10.12.1",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "typescript": "^5.8.3"
+  }
+}
