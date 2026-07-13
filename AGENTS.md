@@ -6,9 +6,9 @@ How work flows between the five roles on Harbor Guardians, per M0 packet area 3 
 
 | Role | Who | May | May not |
 | --- | --- | --- | --- |
-| **Owner (Command)** | Anthony Hammon | Approve/reject specs, packets, PRs, gates; authorize milestones; merge to `main`; create repos/tags/deployments | — (all authority originates here) |
+| **Owner (Command)** | Anthony Hammon | Approve/reject specs, packets, PRs, gates; authorize milestones; promote draft PRs to ready (`gh pr ready`); merge to `main`; create repos/tags/deployments | — (all authority originates here) |
 | **Architect** | Design authority (document channel) | Draft/revise doctrine in `/docs`; propose decisions; resolve escalated doctrine gaps | Write code; merge; change scope without owner approval |
-| **Implementer** | Claude Code | Implement approved specs; author code, schemas, tests, seeds; open PRs; run the harness | Self-merge to `main`; commit to `main`; invent doctrine; exceed the current milestone; touch other projects' infrastructure or credentials |
+| **Implementer** | Claude Code | Implement approved specs; author code, schemas, tests, seeds; open **draft** PRs (`gh pr create --draft`); run the harness | Mark a PR ready for review; merge or self-merge to `main`; commit to `main`; invent doctrine; exceed the current milestone; touch other projects' infrastructure or credentials |
 | **Reviewer** | Independent reviewer | Audit docs, PRs, evidence; demand revisions; verify traceability | Mutate code or docs; approve their own suggestions into `main` |
 | **QA** | Sim harness (automated) | Prove/disprove every claim via invariant suites; block merges through CI | Be bypassed — a red harness stops the line, no exceptions |
 
@@ -44,7 +44,7 @@ Resolution always runs through the document channel: doc updated → decision re
 
 ## 4. Standing boundaries
 
-- The Implementer opens PRs; **merging to `main` is an owner action** (server-side branch protection deferred — see [`CLAUDE.md`](CLAUDE.md) §4 — so this boundary is procedural and absolute).
+- The Implementer opens PRs **as drafts and stops there**; promoting a draft to ready and merging to `main` are **owner-only actions**. `main` is protected by an active GitHub ruleset (PR required, force-push blocked, deletion restricted — see [`CLAUDE.md`](CLAUDE.md) §4), so the boundary is mechanical as well as procedural.
 - The Reviewer reads everything, writes nothing in `/src`, `/data`, `/schema`.
 - QA (harness) evidence accompanies any PR that touches an invariant.
 - Commits cite the governing doc + decision/invariant ID (CLAUDE.md §8).
