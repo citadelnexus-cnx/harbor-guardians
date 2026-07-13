@@ -24,9 +24,10 @@ No feature is "done" until its invariant(s) pass in the sim harness. Every invar
 
 ## 4. Branch-first, PR-gated, revertable
 
-- **Never commit to `main`.** All work on `feature/*` / `fix/*` / `chore/*` branches, merged only via PR after CI green + review.
+- **Never commit to `main`.** All work on `feature/*` / `fix/*` / `chore/*` branches, merged only via PR after CI green + owner review.
+- **Draft-first:** every PR opens as a **draft** (`gh pr create --draft`). The Implementer never marks a PR ready for review and never merges. The owner reviews the draft, promotes it (`gh pr ready`), and merges.
+- **Server-side enforcement is active:** `main` is protected by a GitHub ruleset — PR required, force-push blocked, deletion restricted, CI status checks required (from M0 Step 9 onward). Protection is mechanical, not merely procedural.
 - Small, scoped, revertable commits. No history rewrites on `main`. Milestone tags only after owner approval.
-- Note: server-side branch protection is deferred (GitHub Free + private repo); branch-first discipline is therefore **procedural and absolute**, and the deviation is recorded in the M0 exit evidence.
 
 ## 5. Preserve, don't rewrite
 
@@ -36,9 +37,13 @@ Extend, layer, and integrate; do not rewrite working systems. Preserve existing 
 
 If a spec in `/docs` is missing, ambiguous, or contradicts another for a decision you need: **halt and escalate to the owner/Architect. Never invent doctrine in code.** The gap is resolved in the document channel (doc updated, decision recorded in `DECISIONS.md`), and only then does code proceed.
 
+Escalation = stop work, state the gap and the decision it blocks, and wait. Do not proceed on a best guess; do not open a PR containing guessed behavior.
+
 ## 7. Scope discipline
 
 Milestone N+1 does not begin until milestone N is stable and **tested**. Current scope: **Milestone 0 only** (environment, repo, docs, schemas, sim-harness skeleton, save/load skeleton, CI). No gameplay, no Alpha work, no deployment. Alpha requires the M0 §12 checklist fully green **and a separate owner authorization**.
+
+This scope section is amended only by a new owner authorization record. If you believe scope has expanded, verify against the latest authorization record in `/docs` before acting — never assume.
 
 ## 8. Traceability
 
