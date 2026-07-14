@@ -3,8 +3,8 @@
  * the DC4 unit-requirement metadata mechanically.
  *
  * Checks (Doc 07 §5/§7; M0 packet §7):
- *   1. Drift guard (D39): the committed /schema file must byte-match a fresh
- *      generation from the TS types — hand-edits are rejected.
+ *   1. Drift guard (D39): every committed /schema file must byte-match a
+ *      fresh generation from the TS types — hand-edits are rejected.
  *   2. Every data/guardians/*.json validates against the schema. Files named
  *      *.invalid.json are deliberate negative fixtures: they MUST fail
  *      validation; if one passes, this script exits non-zero.
@@ -18,7 +18,7 @@
 import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import Ajv from "ajv";
-import { buildGuardianKitSeedSchema, SCHEMA_FILE, serializeSchema } from "./build-schema.mjs";
+import { SCHEMA_BUILDS, SCHEMA_FILE, serializeSchema } from "./build-schema.mjs";
 
 const DATA_DIR = "data/guardians";
 let failures = 0;
@@ -27,15 +27,18 @@ const fail = (msg) => {
   console.error(`FAIL  ${msg}`);
 };
 
-// 1. Drift guard (D39: schema must be generated, never hand-edited).
+// 1. Drift guard (D39: every schema must be generated, never hand-edited).
 // CRLF normalized so git autocrlf checkouts on Windows don't false-positive.
-const committed = readFileSync(SCHEMA_FILE, "utf8").replace(/\r\n/g, "\n");
-const fresh = serializeSchema(buildGuardianKitSeedSchema());
-if (committed !== fresh) {
-  fail(`${SCHEMA_FILE} drifts from src/contracts — run \`pnpm run schema:generate\`; hand-edits are forbidden (D39)`);
+for (const { file, build } of SCHEMA_BUILDS) {
+  const committedFile = readFileSync(file, "utf8").replace(/\r\n/g, "\n");
+  if (committedFile !== serializeSchema(build())) {
+    fail(`${file} drifts from src/contracts — run \`pnpm run schema:generate\`; hand-edits are forbidden (D39)`);
+  } else {
+    console.log(`ok    ${file} matches a fresh generation from src/contracts (D39 drift guard)`);
+  }
 }
 
-const schema = JSON.parse(committed);
+const schema = JSON.parse(readFileSync(SCHEMA_FILE, "utf8"));
 const ajv = new Ajv({ allErrors: true, allowUnionTypes: true });
 const validate = ajv.compile(schema);
 

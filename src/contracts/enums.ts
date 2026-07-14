@@ -48,6 +48,12 @@ export type Unit =
   | "flat";
 
 /**
+ * Threat/raid phase vocabulary (Doc 07 §2; Doc 05 phase order). The empty
+ * world's zero-state is "calm"; an Assault never auto-resolves offline (D7).
+ */
+export type RaidPhase = "calm" | "watch" | "warning" | "assault" | "aftermath";
+
+/**
  * The six elemental regions (World Atlas §3; working names per W-D1).
  * Canonical data form per B4A §4B — matches the B4A/B4B §6 seed objects
  * (display case, underscore for Umbral_Deep).

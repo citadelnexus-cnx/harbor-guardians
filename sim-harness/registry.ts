@@ -4,8 +4,13 @@
  * impossible). No gameplay logic lives here; feature PRs replace a stub's
  * check body and flip its status with evidence attached (CLAUDE.md §3).
  *
+ * Implemented at M0 Step 7 (save/load skeleton): S5 + S7, at empty-shell
+ * scope per the Sim §7 M0 exit gate ("S5/S7 pass on the empty shell");
+ * proofs in src/save/proofs.ts. Everything else remains a fail-loud stub.
+ *
  * Governing docs (statements condensed from, and audited against):
  *   - SIM_HARNESS_ACCEPTANCE_SPEC v0.6.2 §4.1–§4.8 (E, L, M, C, CARGO, S, OPS, UX1)
+ *   - SAVE_LOAD_TIME_RECONCILIATION_SPEC v0.5 §15/§16 (S5/S7 checks)
  *   - 07_CONTENT_SCHEMA_AND_DATA_CONTRACTS_SPEC v0.1.2 §7 (DC1–DC6)
  *   - 05_THREAT_AND_RAID_DIRECTOR_FOUNDATION v0.1.3 §11 (TD1–TD4)
  *   - 06_ACCESSIBILITY_INPUT_CALIBRATION_SPEC v0.1.2 §9 (A11Y1–A11Y5)
@@ -17,7 +22,12 @@
  * Invariant refs: the registry itself IS the claim-to-test index (all suites).
  */
 
-import { InvariantStubError, type InvariantEntry, type Suite } from "./types.js";
+import { mkdtempSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { proveCrashDuringWriteSurvival, proveEmptyStateRoundTrip, type ProofResult } from "../src/save/proofs.js";
+import { createSaveBlobValidator, type SaveBlobValidator } from "../src/save/save-blob-validator.js";
+import { InvariantStubError, type CheckVerdict, type InvariantEntry, type Suite } from "./types.js";
 
 const SIM = "SIM_HARNESS_ACCEPTANCE_SPEC v0.6.2";
 
@@ -34,6 +44,34 @@ function stub(id: string, suite: Suite, statement: string, source: string): Inva
       throw new InvariantStubError(id, source);
     },
   };
+}
+
+// ── Save/load checks (M0 Step 7) — S5/S7 implemented at empty-shell scope ────
+// Sim §7 M0 exit gate: "S2/S5/S7 pass on the empty shell". The proofs live in
+// src/save/proofs.ts (shared with tests/save-load.test.ts); each runs in a
+// throwaway temp dir with deterministic evidence (no paths/wall-clock), so the
+// batch repeat-run determinism proof holds over the results.
+let saveBlobValidator: SaveBlobValidator | undefined;
+function runSaveProof(proof: (dir: string, validate: SaveBlobValidator) => ProofResult): CheckVerdict {
+  saveBlobValidator ??= createSaveBlobValidator();
+  const dir = mkdtempSync(join(tmpdir(), "hg-save-proof-"));
+  try {
+    const result = proof(dir, saveBlobValidator);
+    return { pass: result.pass, evidence: result.detail };
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+}
+
+/** An invariant whose check is real and scoped to the M0 empty shell (Sim §7). */
+function implemented(
+  id: string,
+  suite: Suite,
+  statement: string,
+  source: string,
+  check: (ctx: { seed: number }) => CheckVerdict,
+): InvariantEntry {
+  return { id, suite, statement, source, status: "implemented", blocking: true, check };
 }
 
 /** Expected ID count per suite — the runner fails loud if the registry drifts. */
@@ -131,9 +169,21 @@ export const INVARIANT_REGISTRY: readonly InvariantEntry[] = [
   stub("S2", "S", "No network calls on launch/save/load with network disabled.", `${SIM} §4.6`),
   stub("S3", "S", "Static scan: no monetization hooks, no paid-power config paths.", `${SIM} §4.6`),
   stub("S4", "S", "Accessibility settings persist and apply from the first prototype.", `${SIM} §4.6`),
-  stub("S5", "S", "Save/load round-trip preserves world clock, storage states (incl. Crowns), threat phase, queues, Claim Ledger (incl. Story Claims, partial remainders, pending_reward_resolution), System Inbox, and combat suspend snapshot if present.", `${SIM} §4.6`),
+  implemented(
+    "S5",
+    "S",
+    "Save/load round-trip preserves world clock, storage states (incl. Crowns), threat phase, queues, Claim Ledger (incl. Story Claims, partial remainders, pending_reward_resolution), System Inbox, and combat suspend snapshot if present.",
+    `${SIM} §4.6 + SAVE_LOAD_TIME_RECONCILIATION_SPEC v0.5 §16 (M0 Step 7: empty-shell scope per Sim §7 M0 exit)`,
+    () => runSaveProof(proveEmptyStateRoundTrip),
+  ),
   stub("S6", "S", "Production build-flag guard: system-grant code paths are compiled out/disabled in production except approved migration/recovery paths; no dev/debug grant path is reachable.", `${SIM} §4.6`),
-  stub("S7", "S", "Atomic save integrity: temp write → schema validate → flush → rename/swap → preserve prior good save; a simulated crash never corrupts the last known-good save and never duplicates rewards.", `${SIM} §4.6`),
+  implemented(
+    "S7",
+    "S",
+    "Atomic save integrity: temp write → schema validate → flush → rename/swap → preserve prior good save; a simulated crash never corrupts the last known-good save and never duplicates rewards.",
+    `${SIM} §4.6 + SAVE_LOAD_TIME_RECONCILIATION_SPEC v0.5 §15 (M0 Step 7: empty-shell scope per Sim §7 M0 exit)`,
+    () => runSaveProof(proveCrashDuringWriteSurvival),
+  ),
 
   // ── Operations suite (OPS1) — SIM spec §4.7 ───────────────────────────────
   stub("OPS1", "OPS", "Cancel/refund routing: refunds return directly to Harbor stock (Safe→Exposed), obey Total 3S, never enter the Claim Ledger, never exceed 3S (cancellation blocks by default if it would), never silently deleted.", `${SIM} §4.7`),

@@ -1,0 +1,197 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$ref": "#/definitions/SaveBlob",
+  "definitions": {
+    "SaveBlob": {
+      "type": "object",
+      "properties": {
+        "meta": {
+          "$ref": "#/definitions/SaveMeta"
+        },
+        "world_clock": {
+          "$ref": "#/definitions/WorldClock"
+        },
+        "resources": {
+          "type": "object",
+          "properties": {
+            "Crowns": {
+              "$ref": "#/definitions/ResourceBand"
+            },
+            "Provisions": {
+              "$ref": "#/definitions/ResourceBand"
+            },
+            "Iron": {
+              "$ref": "#/definitions/ResourceBand"
+            },
+            "Aether": {
+              "$ref": "#/definitions/ResourceBand"
+            }
+          },
+          "required": [
+            "Crowns",
+            "Provisions",
+            "Iron",
+            "Aether"
+          ],
+          "additionalProperties": false,
+          "description": "Safe + exposed per resource incl. Crown exposed (§16); keys are CoreResource ONLY (DC6)."
+        },
+        "buildings": {
+          "$ref": "#/definitions/EmptyListM0",
+          "description": "BuildingState/queue records land with the Build Queue feature."
+        },
+        "workers": {
+          "$ref": "#/definitions/EmptyListM0",
+          "description": "WorkerState records land with the Economy feature."
+        },
+        "threat": {
+          "$ref": "#/definitions/ThreatBlock"
+        },
+        "claim_ledger": {
+          "type": "object",
+          "properties": {
+            "packages": {
+              "$ref": "#/definitions/EmptyListM0"
+            }
+          },
+          "required": [
+            "packages"
+          ],
+          "additionalProperties": false,
+          "description": "claim_package records (Doc 04 §13; story claims + remainders live inside packages)."
+        },
+        "pending_reward_resolution": {
+          "$ref": "#/definitions/EmptyListM0",
+          "description": "pending_reward_resolution records (Save/Load §11, L14)."
+        },
+        "system_messages": {
+          "$ref": "#/definitions/EmptyListM0",
+          "description": "system_message records (Save/Load §12, M8)."
+        },
+        "merit": {
+          "$ref": "#/definitions/EmptyMapM0",
+          "description": "Per-faction Merit standing (soulbound; never in 3S bands — DC6/FCT1)."
+        },
+        "guardian_bond": {
+          "type": "null",
+          "description": "Persistent guardian bond state (GDN10); null until the guardian feature lands."
+        },
+        "flags_story": {
+          "$ref": "#/definitions/EmptyMapM0",
+          "description": "Story/flag state (§16 \"flags/story\")."
+        }
+      },
+      "required": [
+        "meta",
+        "world_clock",
+        "resources",
+        "buildings",
+        "workers",
+        "threat",
+        "claim_ledger",
+        "pending_reward_resolution",
+        "system_messages",
+        "merit",
+        "guardian_bond",
+        "flags_story"
+      ],
+      "additionalProperties": false,
+      "description": "The complete save blob (Save/Load §16). Field order here is documentation only — serialization is canonical (sorted keys) so round-trips are byte-identical regardless of construction order."
+    },
+    "SaveMeta": {
+      "type": "object",
+      "properties": {
+        "save_schema_version": {
+          "type": "number"
+        },
+        "game_version": {
+          "type": "string"
+        },
+        "last_saved_utc": {
+          "type": "string",
+          "description": "ISO-8601 UTC (§2); reconciliation uses UTC deltas only (§3)."
+        }
+      },
+      "required": [
+        "save_schema_version",
+        "game_version",
+        "last_saved_utc"
+      ],
+      "additionalProperties": false,
+      "description": "Save/Load §1/§2: versions + absolute UTC timestamp (ISO-8601)."
+    },
+    "WorldClock": {
+      "type": "object",
+      "properties": {
+        "day_index": {
+          "type": "number"
+        },
+        "time_of_day": {
+          "type": "number"
+        }
+      },
+      "required": [
+        "day_index",
+        "time_of_day"
+      ],
+      "additionalProperties": false,
+      "description": "In-game World Clock (§2: \"day index, time-of-day\"). `time_of_day` is an integer pulse counter within the day; its cadence binds to the Economy pulse when the sim core lands (E8 pacing is UNKNOWN until measured)."
+    },
+    "ResourceBand": {
+      "type": "object",
+      "properties": {
+        "safe": {
+          "type": "number"
+        },
+        "exposed": {
+          "type": "number"
+        }
+      },
+      "required": [
+        "safe",
+        "exposed"
+      ],
+      "additionalProperties": false,
+      "description": "Per-resource stored state: Safe S + Exposed 2S bands (D1). These are state values; the S/2S/3S caps themselves are /data seed values (DC1), not save fields."
+    },
+    "EmptyListM0": {
+      "type": "array",
+      "minItems": 0,
+      "maxItems": 0,
+      "description": "M0 empty-shell placeholder: schema-enforced empty list until the block's feature + migration land."
+    },
+    "ThreatBlock": {
+      "type": "object",
+      "properties": {
+        "phase": {
+          "$ref": "#/definitions/RaidPhase"
+        }
+      },
+      "required": [
+        "phase"
+      ],
+      "additionalProperties": false,
+      "description": "Threat block, minimal at M0: phase only (Doc 05; components land with the threat director)."
+    },
+    "RaidPhase": {
+      "type": "string",
+      "enum": [
+        "calm",
+        "watch",
+        "warning",
+        "assault",
+        "aftermath"
+      ],
+      "description": "Threat/raid phase vocabulary (Doc 07 §2; Doc 05 phase order). The empty world's zero-state is \"calm\"; an Assault never auto-resolves offline (D7)."
+    },
+    "EmptyMapM0": {
+      "type": "object",
+      "additionalProperties": {
+        "not": {}
+      },
+      "description": "M0 empty-shell placeholder: schema-enforced empty map until the block's feature + migration land."
+    }
+  },
+  "$id": "hg.save_blob",
+  "$comment": "GENERATED from src/contracts/save-blob.ts (D39) — do not edit by hand; run `pnpm run schema:generate`."
+}

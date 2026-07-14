@@ -13,13 +13,17 @@ M0 packet §8; [`CLAUDE.md`](../CLAUDE.md) §3 (claim-to-test).
 **No gameplay or sim-core logic exists here.** What exists:
 
 - **Invariant registry** ([`registry.ts`](registry.ts)) — all 122 required IDs
-  registered as addressable, fail-loud stubs:
+  registered and addressable:
   E1–E21 · L1–L15 · M1–M10 · C1–C8 · CARGO1–CARGO5 · S1–S7 · OPS1 · UX1 ·
   DC1–DC6 · TD1–TD4 · A11Y1–A11Y5 · OB1–OB5 · GEAR1–GEAR6 · W1–W9 ·
   FCT1–FCT8 · GDN1–GDN11.
-  Executing a stub **throws** (`InvariantStubError`) — "claimed but untested"
-  is impossible. A feature PR turns its stub(s) green by replacing the check
-  body, flipping `status` to `"implemented"`, and attaching evidence.
+  **Implemented (M0 Step 7):** S5 + S7 at empty-shell scope (Sim §7 M0 exit
+  gate), backed by the save/load proofs in
+  [`src/save/proofs.ts`](../src/save/proofs.ts). Every other ID is a
+  fail-loud stub: executing it **throws** (`InvariantStubError`) — "claimed
+  but untested" is impossible. A feature PR turns its stub(s) green by
+  replacing the check body, flipping `status` to `"implemented"`, and
+  attaching evidence.
 - **Fail-loud runner** ([`run.ts`](run.ts)) — verifies registry completeness,
   gates on schema-validated seeds (invokes `scripts/validate-data.mjs`, Sim §2),
   verifies every stub throws, proves fixed-seed repeat-run determinism, and
@@ -41,9 +45,10 @@ pnpm run sim:harness -- --list          # print the registry
 pnpm run sim:harness -- --invariant E2  # execute one invariant for real
 ```
 
-At M0, `--invariant <ID>` **exits 1 for every ID** — that is the point: every
-invariant is a fail-loud stub until its feature is implemented and proven.
-The batch records stubs as `STUB_FAIL_LOUD_VERIFIED`, never `PASS`.
+At M0, `--invariant <ID>` **exits 1 for every stub ID** — that is the point:
+an invariant stays a fail-loud stub until its feature is implemented and
+proven (S5/S7 exit 0 since Step 7). The batch records stubs as
+`STUB_FAIL_LOUD_VERIFIED`, never `PASS`.
 
 Batch reports are written to `sim-harness/reports/` (gitignored); they are
 evidence artifacts attached to PRs per Sim §8, not committed state.
