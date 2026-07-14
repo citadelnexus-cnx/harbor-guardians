@@ -27,8 +27,9 @@ const fail = (msg) => {
   console.error(`FAIL  ${msg}`);
 };
 
-// 1. Drift guard (D39: schema must be generated, never hand-edited)
-const committed = readFileSync(SCHEMA_FILE, "utf8");
+// 1. Drift guard (D39: schema must be generated, never hand-edited).
+// CRLF normalized so git autocrlf checkouts on Windows don't false-positive.
+const committed = readFileSync(SCHEMA_FILE, "utf8").replace(/\r\n/g, "\n");
 const fresh = serializeSchema(buildGuardianKitSeedSchema());
 if (committed !== fresh) {
   fail(`${SCHEMA_FILE} drifts from src/contracts — run \`pnpm run schema:generate\`; hand-edits are forbidden (D39)`);
