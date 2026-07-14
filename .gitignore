@@ -3,3 +3,6 @@ dist/
 target/
 .env
 *.local
+
+# Local transfer/staging kit; docs are installed under /docs
+_kit/
