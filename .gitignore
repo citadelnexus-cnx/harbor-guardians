@@ -1,6 +1,9 @@
 node_modules/
 dist/
 target/
+
+# Harness batch reports are evidence artifacts, attached to PRs — not committed
+sim-harness/reports/
 .env
 *.local
 
