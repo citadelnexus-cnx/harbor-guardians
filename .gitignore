@@ -2,6 +2,9 @@ node_modules/
 dist/
 target/
 
+# Tauri build-time generated schemas (regenerated on every build)
+src-tauri/gen/
+
 # Harness batch reports are evidence artifacts, attached to PRs — not committed
 sim-harness/reports/
 .env

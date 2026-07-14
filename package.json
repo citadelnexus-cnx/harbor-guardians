@@ -13,9 +13,11 @@
     "schema:generate": "node scripts/generate-schema.mjs",
     "schema:validate": "node scripts/validate-data.mjs",
     "sim:harness": "tsx sim-harness/run.ts",
-    "test:save": "tsx --test tests/save-load.test.ts"
+    "test:save": "tsx --test tests/save-load.test.ts",
+    "tauri": "tauri"
   },
   "devDependencies": {
+    "@tauri-apps/cli": "^2.11.4",
     "@types/node": "22.20.1",
     "ajv": "8.20.0",
     "ts-json-schema-generator": "2.9.0",

@@ -1,0 +1,15 @@
+# Harbor Guardians — M0 Tauri 2 shell crate (M0 packet §1/§5: smoke-test
+# window only; no gameplay, no IPC, no plugins). Exact versions are pinned by
+# the committed Cargo.lock.
+[package]
+name = "harbor-guardians"
+version = "0.0.0"
+description = "Harbor Guardians — M0 desktop shell (smoke-test window only)"
+edition = "2021"
+publish = false
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+tauri = { version = "2", features = [] }
