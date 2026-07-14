@@ -9,10 +9,10 @@ importers:
   .:
     devDependencies:
       ajv:
-        specifier: ^8.20.0
+        specifier: 8.20.0
         version: 8.20.0
       ts-json-schema-generator:
-        specifier: ^2.9.0
+        specifier: 2.9.0
         version: 2.9.0
       typescript:
         specifier: ^5.8.3
