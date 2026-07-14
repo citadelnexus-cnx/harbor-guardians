@@ -24,7 +24,8 @@
  *
  * Governing docs: SIM_HARNESS_ACCEPTANCE_SPEC v0.6.2 §2/§3/§5/§7/§8;
  * M0 packet §8; CLAUDE.md §3 (claim-to-test).
- * Invariant refs: registers all suites; implements none (all stubs at M0).
+ * Invariant refs: registers all suites; S5/S7 implemented at M0 Step 7
+ * (empty-shell scope, Sim §7 M0 exit gate); all other IDs are stubs.
  */
 
 import { spawnSync } from "node:child_process";
@@ -260,9 +261,11 @@ mkdirSync(dirname(outPath), { recursive: true });
 writeFileSync(outPath, JSON.stringify(report, null, 2) + "\n", "utf8");
 console.log(`\nreport written: ${outPath}`);
 
+const implementedIds = batch.invariant_results.filter((r) => r.outcome === "PASS").map((r) => r.id);
+const stubTotal = batch.invariant_results.filter((r) => r.outcome === "STUB_FAIL_LOUD_VERIFIED").length;
 console.log(
   batchGreen
-    ? `\nM0 BATCH GREEN — ${INVARIANT_REGISTRY.length} invariants registered (all fail-loud stubs), seed gate + determinism proof passed (seed ${seed}). No invariant is claimed as passing.`
+    ? `\nM0 BATCH GREEN — ${INVARIANT_REGISTRY.length} invariants registered: ${stubTotal} fail-loud stubs (no unimplemented invariant is claimed as passing) + ${implementedIds.length} implemented and proven green (${implementedIds.join(", ") || "none"}); seed gate + determinism proof passed (seed ${seed}).`
     : `\nM0 BATCH RED — see failures above (seed ${seed}).`,
 );
 process.exit(batchGreen ? 0 : 1);
