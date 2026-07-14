@@ -11,11 +11,14 @@
   "scripts": {
     "typecheck": "tsc --noEmit",
     "schema:generate": "node scripts/generate-schema.mjs",
-    "schema:validate": "node scripts/validate-data.mjs"
+    "schema:validate": "node scripts/validate-data.mjs",
+    "sim:harness": "tsx sim-harness/run.ts"
   },
   "devDependencies": {
+    "@types/node": "22.20.1",
     "ajv": "8.20.0",
     "ts-json-schema-generator": "2.9.0",
+    "tsx": "4.20.3",
     "typescript": "^5.8.3"
   }
 }
