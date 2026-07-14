@@ -1,6 +1,6 @@
 # CLAUDE.md — Harbor Guardians Operating Rules
 
-Operating rules for Claude Code (the Implementer) on Harbor Guardians — a standalone city-builder × RPG hybrid (TypeScript + Tauri 2, PixiJS, deterministic pure sim core). These rules encode M0 packet area 3 (`docs/M0_IMPLEMENTATION_READINESS_PACKET_v0.1.3.md` §3) and the standing doctrine carried into build (`M0_BUILD_AUTHORIZATION_RECORD_v1.0` §6). They are not suggestions; they are the conditions under which implementation is authorized.
+Operating rules for Claude Code (the Implementer) on Harbor Guardians — a standalone city-builder × RPG hybrid (TypeScript + Tauri 2, PixiJS, deterministic pure sim core). These rules encode M0 packet area 3 (`docs/M0_IMPLEMENTATION_READINESS_PACKET_v0.1.3.md` §3) and the standing doctrine carried into build. Milestone 0 was authorized by a signed owner authorization record executing the packet's §13 gate; that record is held privately by the owner outside this public repo. These rules are not suggestions; they are the conditions under which implementation is authorized.
 
 ## 1. Roles & authority
 
@@ -43,7 +43,7 @@ Escalation = stop work, state the gap and the decision it blocks, and wait. Do n
 
 Milestone N+1 does not begin until milestone N is stable and **tested**. Current scope: **Milestone 0 only** (environment, repo, docs, schemas, sim-harness skeleton, save/load skeleton, CI). No gameplay, no Alpha work, no deployment. Alpha requires the M0 §12 checklist fully green **and a separate owner authorization**.
 
-This scope section is amended only by a new owner authorization record. If you believe scope has expanded, verify against the latest authorization record in `/docs` before acting — never assume.
+This scope section is amended only by a new owner authorization record (held privately outside this public repo, like the M0 record). If you believe scope has expanded, verify with the owner against the latest authorization record before acting — never assume.
 
 ## 8. Traceability
 

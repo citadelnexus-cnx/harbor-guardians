@@ -64,7 +64,8 @@ harbor-guardians/
   /docs/                     # all foundation + B-series docs (read-only source of truth in-repo)
     /foundation/             # the closed 18-doc set
     /phase-b/                # B2, B3, B4, B4A, B4B
-    CLAUDE.md AGENTS.md DECISIONS.md
+    /reviews/                # external reviews + dispositions
+  CLAUDE.md AGENTS.md DECISIONS.md   # operating rules + decision ledger at repo root (canonical; cross-linked from docs/README.md)
   /data/                     # data seeds (No Magic Numbers) — the game's content
     /world/ /factions/ /guardians/ /economy/ /combat/ /threat/ ...
   /schema/                   # generated JSON Schema (from TS types, D39)
@@ -109,7 +110,7 @@ harbor-guardians/
 - What each agent may and may not do (e.g. Implementer may open PRs, may not self-merge to `main` without approval; Reviewer never mutates code).
 - Escalation: what forces a stop-and-ask (missing doctrine, an invariant conflict, a request that would breach a foundation invariant).
 
-**Acceptance:** both files exist, are committed to `/docs/`, and encode every rule above; a dry-run "explain how you'd approach task X" from Claude Code reflects them.
+**Acceptance:** both files exist, are committed at the **repo root** (the canonical location, where agent tooling reads them; cross-linked from `docs/README.md` — they are deliberately NOT duplicated under `/docs/` to prevent drift), and encode every rule above; a dry-run "explain how you'd approach task X" from Claude Code reflects them.
 
 ---
 

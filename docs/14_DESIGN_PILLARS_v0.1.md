@@ -4,7 +4,7 @@ doc_id: "14_DESIGN_PILLARS"
 version: 0.1-DRAFT
 date: 2026-07-12
 bundle_version: pillars-2026-07-12
-status: DRAFT v0.1 for owner/independent review — authored per approved decisions R-D2/R-D6 (13_DESIGN_REVIEW_DISPOSITION v0.2, 2026-07-12). Once review passes, this document is NEAR-IMMUTABLE: changing a pillar requires explicit owner sign-off and a dossier note. NOT canon until reviewed; does not alter M0 scope.
+status: APPROVED FOUNDATION DRAFT — planning-locked per R-D2/R-D6 (13_DESIGN_REVIEW_DISPOSITION v0.2, 2026-07-12); not implementation authorization; changes require explicit owner sign-off and dossier note.
 owner: Anthony Hammon
 source: "13_DESIGN_REVIEW_DISPOSITION v0.2 (R-D1–R-D6 approved); external design review 2026-07-12; HARBOR_GUARDIANS_BLUEPRINT_FINAL_v6; Economy v1.7 (E15/E16); 12_GUARDIAN_SANCTUM_AND_KIT v0.1.2 (GDN4/GDN5/GDN11); 08_FIRST_HOUR_ONBOARDING_AND_SAFETY v0.1.2 (OB-suite); World Atlas v0.2.1"
 classification: FUTURE BUILD — decision-filter doctrine, not mechanics; no numbers
@@ -101,4 +101,4 @@ Pillars are the most stable layer of the project — beneath even the foundation
 
 Enters `/docs/` at M0 Step 4 alongside the foundation set (M0 scope unaffected — this is a document, not a build task). Review loop: standard package check → wording review against R-D2 → confirm filter questions are answerable for the existing v1 feature set (they are — §1–§5 each cite the systems that already embody them).
 
-*DRAFT v0.1 — decision-filter doctrine per R-D2/R-D6. Not canon until reviewed; near-immutable after. Does not alter M0 scope or authorization.*
+*v0.1 — APPROVED FOUNDATION DRAFT; decision-filter doctrine, planning-locked per R-D2/R-D6. Near-immutable: changes require explicit owner sign-off and a dossier note. Not implementation authorization; does not alter M0 scope.*

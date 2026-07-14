@@ -12,7 +12,7 @@ project: "Harbor Guardians — standalone city-builder × RPG hybrid (TypeScript
 
 This is the **complete set of documents** that must be reviewed before Milestone 0 build can be authorized. Everything below is at its current head version and is included in the consolidated package `hg-COMPLETE-pre-M0-set-FINALIZED-2026-07-11.zip`. Nothing is canon; no repo/vault/code exists; approval of the M0 packet's §13 gate is the only step that turns any of this into build authorization.
 
-**Total: 25 documents** (F-1 resolved: Economy v1.7 defines E21) = 18 foundation (pre-planning, CLOSED) + 6 Phase-B content + 1 Milestone 0 packet, plus this manifest.
+**Total: 24 documents** (F-1 resolved: Economy v1.7 defines E21) = 18 foundation (pre-planning, CLOSED) + 5 Phase-B content + 1 Milestone 0 packet, plus this manifest (and the B0 foundation index as a supporting file — 26 files in the consolidated package).
 
 ---
 
@@ -45,7 +45,7 @@ This is the **complete set of documents** that must be reviewed before Milestone
 
 *(Group A's two registers + two amendments + Group B's 14 = the 18-doc foundation set; B0 index is the 19th supporting file in that set.)*
 
-## Group C — Phase-B content (6 docs)
+## Group C — Phase-B content (5 docs)
 | # | Document | Version | Role | Invariants | Status |
 |---|---|---|---|---|---|
 | C1 | `10_WORLD_ATLAS_FOUNDATION_v0.2.1` | v0.2.1 | The Evermeer graph, regions, routes, Drowned Harbors | W1–W9 | document-stage closed |

@@ -35,7 +35,7 @@ blocks: "Milestone 0 code/data scaffolding and any data-driven implementation"
 - `BuildingState = operating | idle | stalled | disabled | under_repair`
 
 ## 3. Schema catalog (canonical shapes)
-Each is a JSON Schema with `$id`, validated in CI. Summaries below name required fields; full JSON Schemas are generated as `/schemas/*.json`.
+Each is a JSON Schema with `$id`, validated in CI. Summaries below name required fields; full JSON Schemas are generated as `/schema/*.json`.
 
 - **resource_definition** — `id · resource · start_stock · cap_store_mapping · raidable · decays · leaks` (Economy §3/§7).
 - **storage_state** — `core_resource (CoreResource) · S_by_tier[] · exposed_capacity(2S) · total(3S) · exposed_behavior (spoil/leak/none) · crown_no_decay_flag` (Economy §7, AMEND-02 A2.3). Merit and receipt metrics have no storage_state.
@@ -50,7 +50,7 @@ Each is a JSON Schema with `$id`, validated in CI. Summaries below name required
 - **docked_cargo** — `cargo_id · source_voyage_id · contents{CoreResource:amount} · arrived_world_clock · pressure_timer_state (active|needs_resolution) · exposed=true` (04B §7). Cargo contents are `CoreResource` only (never Merit/receipts).
 - **save_blob** — the Save/Load §16 block list, each sub-block schema-referenced; carries `save_schema_version · game_version · last_saved_utc · world_clock`.
 - **sim_report** — the Sim §5 field set, machine-readable, with `seed` and an `invariant_results[]` table.
-- **sim_invariant** — `id (E*/L*/M*/C*/S*/CARGO*/OPS*/TD*/A11Y*/UX1) · statement · suite · blocking=true`.
+- **sim_invariant** — `id (E*/L*/M*/C*/S*/CARGO*/OPS*/TD*/A11Y*/UX1/DC*/OB*/GEAR*/W*/FCT*/GDN*) · statement · suite · blocking=true`.
 
 ## 4. Cross-system referential integrity
 - A `combat_reward_line.route` must resolve to exactly one delivery system (CARGO2).
@@ -70,11 +70,11 @@ Every schema carries `schema_version`; bumping it is a migration event. The cano
 ## 7. Sim invariants (contract-level)
 **DC1** every gameplay number resolves to a schema-validated seed field (No Magic Numbers); **DC2** every `combat_reward_line` declares exactly one `RewardRoute` (mirrors CARGO2); **DC3** referential integrity holds for message↔package↔pending links; **DC4** every seed value carries the full unit-requirement metadata; **DC5** an unversioned or invalid schema blocks CI; **DC6** storage_state, exposed-surplus, cargo, and raid-loss fields type against `CoreResource` only — a schema that admits `StandingResource` (Merit) or `ReceiptMetric` into any of those fields fails validation.
 
-## 8. Data-seed / schema exports (`/schemas/`, `/data/`)
-`/schemas/` holds the JSON Schemas for every type in §3; `/data/` holds the seed instances (economy, cargo, threat, rewards, inbox, accessibility, operations, sim). This doc is the index; each foundation doc owns its seed contents.
+## 8. Data-seed / schema exports (`/schema/`, `/data/`)
+`/schema/` holds the JSON Schemas for every type in §3; `/data/` holds the seed instances (economy, cargo, threat, rewards, inbox, accessibility, operations, sim). This doc is the index; each foundation doc owns its seed contents.
 
 ## 9. Open questions for owner
-1. **Schema language:** JSON Schema (draft 2020-12) vs a typed IDL (e.g. TypeScript types as source of truth with generated JSON Schema). Recommended: TS types as authorship source → generated JSON Schema for runtime/sim validation (fits the TS + Tauri stack).
+1. **Schema language — RESOLVED by D39 (approved 2026-07-10):** TypeScript types are the authoring source; JSON Schema is generated from them for runtime/sim validation (fits the TS + Tauri stack). No hand-authored JSON Schema.
 2. **ID convention:** confirm `snake_case` string ids with a `hg.` namespace prefix (e.g. `hg.faucet.farm`).
 3. **Seed directory layout:** per-system folders (recommended) vs one flat seed set.
 

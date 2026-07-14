@@ -107,9 +107,14 @@ Casual Collector · Hoarder · Spender · Defender · Explorer · Trader · Tave
 - **C7** Input-latency calibration exists before any public playable claim.
 - **C8** Combat suspend/resume cannot duplicate rewards, reroll loot, or convert Bond Charge into economy resources.
 
-### 4.5 Cargo suite (CARGO1–CARGO2)
+### 4.5 Cargo suite (CARGO1–CARGO5)
 - **CARGO1** — physical cargo never enters the Claim Ledger. A source rule may choose Claim Ledger instead of physical cargo at generation time, but once a line is routed to Ship Hold / Docked Cargo, it cannot later be converted or re-routed into the Claim Ledger.
-- **CARGO2** — every expedition reward line must declare exactly one route at generation time: Claim Ledger, Story Claim, Ship Hold / Docked Cargo, Gear Locker, or Auto-Receipt. A line routed to physical cargo remains physical cargo until unloaded, lost through a governed cargo rule, or resolved through the Docked Cargo system. (Full model in `04B_SHIP_HOLD_AND_DOCKED_CARGO_FOUNDATION` v0.1.2; CARGO3–CARGO5 there.)
+- **CARGO2** — every expedition reward line must declare exactly one route at generation time: Claim Ledger, Story Claim, Ship Hold / Docked Cargo, Gear Locker, or Auto-Receipt. A line routed to physical cargo remains physical cargo until unloaded, lost through a governed cargo rule, or resolved through the Docked Cargo system.
+- **CARGO3** — loot exceeding hold capacity is left at source, never silently stored and never Ledger-routed. *(registered as a fail-loud stub until cargo implementation)*
+- **CARGO4** — Docked Cargo obeys exposed-surplus raid/spoilage/leak rules; unloading obeys Safe/Exposed/Total 3S; partial unload preserves totals (`unloaded + left_on_dock == arrived`). *(registered as a fail-loud stub until cargo implementation)*
+- **CARGO5** — no hidden cargo loss: every spoilage/leak/raid/left-behind event is ledger-logged; the pressure timer only moves cargo to Needs Resolution (blocking new voyages from that ship/dock), and **never hard-deletes cargo**. *(registered as a fail-loud stub until cargo implementation)*
+
+(Full model in `04B_SHIP_HOLD_AND_DOCKED_CARGO_FOUNDATION` v0.1.2, which defines CARGO1–CARGO5.)
 
 ### 4.6 Trust & safety suite (S1–S7)
 - **S1** Ledger completeness: every economic delta has a world-clock-stamped ledger entry.
