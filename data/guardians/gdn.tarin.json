@@ -1,0 +1,72 @@
+{
+  "schema_version": "0.1.0",
+  "kit": {
+    "guardian_id": "gdn.tarin",
+    "name_working": "Tarin",
+    "animal": "Elephant",
+    "chassis": "bulwark",
+    "launch_wave": "launch",
+    "home_region": "Verdance",
+    "identity_line": "Stand in front, hold the wall, send the damage back.",
+    "difficulty_tag": "standard",
+    "bond_charge_profile": {
+      "primary_source": "guarding_allies_structures",
+      "secondary_sources": ["survive_assault_walls_intact", "intercept_hit_for_ally"],
+      "bond_charge_fill_rate_target": "steady",
+      "bond_charge_reset_or_decay_rule": "slow_decay_out_of_combat_no_cross_harbor_carry"
+    },
+    "guardian_surge": {
+      "name_working": "Wavebreaker Aegis",
+      "duration_turns_target": 3,
+      "recharge_target": "combat_only_favors_long_defensive_fights",
+      "effect_hooks": ["party_structure_damage_reduction", "bounded_counter_force_redirect"],
+      "never": ["consumes_aether", "bought_from_economy", "gated_behind_perfect_timing"]
+    },
+    "economy_modifier": {
+      "shifts": [
+        { "dir": "+", "target_kind": "event_id", "target": "wall_repair", "effect": "structure_durability_cheaper_repair" },
+        { "dir": "-", "target_kind": "event_id", "target": "combat_clear", "effect": "slower_burst_clear_speed" }
+      ],
+      "st5_median_completion_variance_max": 0.15,
+      "st5_tradeoff_required_threshold": 0.2,
+      "projected_st5_variance_target": 0.13
+    },
+    "accessibility": { "assist_parity": true, "cues": ["shape", "icon", "text"] },
+    "sanctum_ref": "sanctum.tarin",
+    "provenance": "original_elephant_crest_wave_breaker_arc"
+  },
+  "value_metadata": [
+    {
+      "id": "gdn.tarin.surge.duration_turns_target",
+      "path": "kit.guardian_surge.duration_turns_target",
+      "unit": "flat",
+      "gate": "launch",
+      "source_doc_section": "B4A v0.1.2 §2/§6 (design target pending sim)",
+      "invariant_refs": ["GDN3", "DC4"]
+    },
+    {
+      "id": "gdn.tarin.economy.st5_median_completion_variance_max",
+      "path": "kit.economy_modifier.st5_median_completion_variance_max",
+      "unit": "flat",
+      "gate": "launch",
+      "source_doc_section": "B4A v0.1.2 §4C/§6 (Economy §16 sidegrade budget)",
+      "invariant_refs": ["GDN4", "DC4"]
+    },
+    {
+      "id": "gdn.tarin.economy.st5_tradeoff_required_threshold",
+      "path": "kit.economy_modifier.st5_tradeoff_required_threshold",
+      "unit": "flat",
+      "gate": "launch",
+      "source_doc_section": "B4A v0.1.2 §4C/§6 (hard review threshold)",
+      "invariant_refs": ["GDN4", "DC4"]
+    },
+    {
+      "id": "gdn.tarin.economy.projected_st5_variance_target",
+      "path": "kit.economy_modifier.projected_st5_variance_target",
+      "unit": "flat",
+      "gate": "launch",
+      "source_doc_section": "B4A v0.1.2 §2/§6 (projection pending sim, GDN4)",
+      "invariant_refs": ["GDN4", "DC4"]
+    }
+  ]
+}

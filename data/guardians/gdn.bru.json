@@ -1,0 +1,72 @@
+{
+  "schema_version": "0.1.0",
+  "kit": {
+    "guardian_id": "gdn.bru",
+    "name_working": "Bru",
+    "animal": "Bear",
+    "chassis": "warden",
+    "launch_wave": "launch",
+    "home_region": "Galewrack",
+    "identity_line": "Claim the ground, deny the lane, make them fight on your terms.",
+    "difficulty_tag": "standard",
+    "bond_charge_profile": {
+      "primary_source": "hold_contested_zone",
+      "secondary_sources": ["deny_enemy_lane", "survive_full_raid_without_ceding_ground"],
+      "bond_charge_fill_rate_target": "steady_slow",
+      "bond_charge_reset_or_decay_rule": "slow_decay_out_of_combat_no_cross_harbor_carry"
+    },
+    "guardian_surge": {
+      "name_working": "Tideward Dominion",
+      "duration_turns_target": 3,
+      "recharge_target": "combat_only_favors_held_fights",
+      "effect_hooks": ["denial_zone_attrition_and_initiative_pushback", "bounded_ally_steadiness_in_zone"],
+      "never": ["consumes_aether", "bought_from_economy", "gated_behind_perfect_timing"]
+    },
+    "economy_modifier": {
+      "shifts": [
+        { "dir": "+", "target_kind": "event_id", "target": "defended_route_hold", "effect": "reduced_route_threat_accrual_on_held_lanes" },
+        { "dir": "-", "target_kind": "event_id", "target": "expedition_speed", "effect": "slower_expedition_turnaround" }
+      ],
+      "st5_median_completion_variance_max": 0.15,
+      "st5_tradeoff_required_threshold": 0.2,
+      "projected_st5_variance_target": 0.12
+    },
+    "accessibility": { "assist_parity": true, "cues": ["shape", "icon", "text"] },
+    "sanctum_ref": "sanctum.bru",
+    "provenance": "original_bear_stance_storm_ward_ring"
+  },
+  "value_metadata": [
+    {
+      "id": "gdn.bru.surge.duration_turns_target",
+      "path": "kit.guardian_surge.duration_turns_target",
+      "unit": "flat",
+      "gate": "launch",
+      "source_doc_section": "B4B v0.2.1 §1/§6 (design target pending sim)",
+      "invariant_refs": ["GDN3", "DC4"]
+    },
+    {
+      "id": "gdn.bru.economy.st5_median_completion_variance_max",
+      "path": "kit.economy_modifier.st5_median_completion_variance_max",
+      "unit": "flat",
+      "gate": "launch",
+      "source_doc_section": "B4B v0.2.1 §6; B4A v0.1.2 §4C (Economy §16 sidegrade budget)",
+      "invariant_refs": ["GDN4", "DC4"]
+    },
+    {
+      "id": "gdn.bru.economy.st5_tradeoff_required_threshold",
+      "path": "kit.economy_modifier.st5_tradeoff_required_threshold",
+      "unit": "flat",
+      "gate": "launch",
+      "source_doc_section": "B4B v0.2.1 §6; B4A v0.1.2 §4C (hard review threshold)",
+      "invariant_refs": ["GDN4", "DC4"]
+    },
+    {
+      "id": "gdn.bru.economy.projected_st5_variance_target",
+      "path": "kit.economy_modifier.projected_st5_variance_target",
+      "unit": "flat",
+      "gate": "launch",
+      "source_doc_section": "B4B v0.2.1 §1/§6 (projection pending sim, GDN4)",
+      "invariant_refs": ["GDN4", "DC4"]
+    }
+  ]
+}

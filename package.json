@@ -9,9 +9,13 @@
     "node": ">=22"
   },
   "scripts": {
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "schema:generate": "node scripts/generate-schema.mjs",
+    "schema:validate": "node scripts/validate-data.mjs"
   },
   "devDependencies": {
+    "ajv": "8.20.0",
+    "ts-json-schema-generator": "2.9.0",
     "typescript": "^5.8.3"
   }
 }

@@ -1,0 +1,72 @@
+{
+  "schema_version": "0.1.0",
+  "kit": {
+    "guardian_id": "gdn.raxa",
+    "name_working": "Raxa",
+    "animal": "Tiger",
+    "chassis": "striker",
+    "launch_wave": "launch",
+    "home_region": "Emberreach",
+    "identity_line": "Hit the breach hard and clear it fast.",
+    "difficulty_tag": "approachable",
+    "bond_charge_profile": {
+      "primary_source": "precision_tide_chains",
+      "secondary_sources": ["breached_lane_finish", "assault_wave_clear"],
+      "bond_charge_fill_rate_target": "moderate_fast",
+      "bond_charge_reset_or_decay_rule": "partial_carry_intra_expedition_full_reset_at_harbor"
+    },
+    "guardian_surge": {
+      "name_working": "Emberbreak",
+      "duration_turns_target": 3,
+      "recharge_target": "combat_only_1_per_2to3_encounters",
+      "effect_hooks": ["bonus_burst_vs_breached_lane", "surge_widened_chain_window"],
+      "never": ["consumes_aether", "bought_from_economy", "gated_behind_perfect_timing"]
+    },
+    "economy_modifier": {
+      "shifts": [
+        { "dir": "+", "target_kind": "event_id", "target": "defended_raid_reward", "effect": "raid_salvage_yield" },
+        { "dir": "-", "target_kind": "sink_id", "target": "expedition_rations", "effect": "higher_rations_pressure" }
+      ],
+      "st5_median_completion_variance_max": 0.15,
+      "st5_tradeoff_required_threshold": 0.2,
+      "projected_st5_variance_target": 0.1
+    },
+    "accessibility": { "assist_parity": true, "cues": ["shape", "icon", "text"] },
+    "sanctum_ref": "sanctum.raxa",
+    "provenance": "original_tiger_sigil_ember_flare"
+  },
+  "value_metadata": [
+    {
+      "id": "gdn.raxa.surge.duration_turns_target",
+      "path": "kit.guardian_surge.duration_turns_target",
+      "unit": "flat",
+      "gate": "launch",
+      "source_doc_section": "B4A v0.1.2 §1/§6 (design target pending sim)",
+      "invariant_refs": ["GDN3", "DC4"]
+    },
+    {
+      "id": "gdn.raxa.economy.st5_median_completion_variance_max",
+      "path": "kit.economy_modifier.st5_median_completion_variance_max",
+      "unit": "flat",
+      "gate": "launch",
+      "source_doc_section": "B4A v0.1.2 §4C/§6 (Economy §16 sidegrade budget)",
+      "invariant_refs": ["GDN4", "DC4"]
+    },
+    {
+      "id": "gdn.raxa.economy.st5_tradeoff_required_threshold",
+      "path": "kit.economy_modifier.st5_tradeoff_required_threshold",
+      "unit": "flat",
+      "gate": "launch",
+      "source_doc_section": "B4A v0.1.2 §4C/§6 (hard review threshold)",
+      "invariant_refs": ["GDN4", "DC4"]
+    },
+    {
+      "id": "gdn.raxa.economy.projected_st5_variance_target",
+      "path": "kit.economy_modifier.projected_st5_variance_target",
+      "unit": "flat",
+      "gate": "launch",
+      "source_doc_section": "B4A v0.1.2 §1/§6 (projection pending sim, GDN4)",
+      "invariant_refs": ["GDN4", "DC4"]
+    }
+  ]
+}

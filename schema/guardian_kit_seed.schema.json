@@ -1,0 +1,349 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$ref": "#/definitions/GuardianKitSeed",
+  "definitions": {
+    "GuardianKitSeed": {
+      "type": "object",
+      "properties": {
+        "schema_version": {
+          "type": "string"
+        },
+        "kit": {
+          "$ref": "#/definitions/GuardianKit"
+        },
+        "value_metadata": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/SeedValueMetadata"
+          }
+        }
+      },
+      "required": [
+        "schema_version",
+        "kit",
+        "value_metadata"
+      ],
+      "additionalProperties": false,
+      "description": "A /data/guardians seed file: versioned envelope (DC5 — an unversioned seed blocks the build) carrying one GuardianKit plus its DC4 value metadata."
+    },
+    "GuardianKit": {
+      "type": "object",
+      "properties": {
+        "guardian_id": {
+          "type": "string"
+        },
+        "name_working": {
+          "type": "string"
+        },
+        "animal": {
+          "type": "string",
+          "description": "Working placeholder except the flagship trio (G-D6)."
+        },
+        "chassis": {
+          "$ref": "#/definitions/Chassis"
+        },
+        "launch_wave": {
+          "$ref": "#/definitions/LaunchWave"
+        },
+        "home_region": {
+          "$ref": "#/definitions/Region"
+        },
+        "identity_line": {
+          "type": "string"
+        },
+        "difficulty_tag": {
+          "$ref": "#/definitions/DifficultyTag"
+        },
+        "bond_charge_profile": {
+          "$ref": "#/definitions/BondChargeProfile"
+        },
+        "guardian_surge": {
+          "$ref": "#/definitions/GuardianSurge"
+        },
+        "economy_modifier": {
+          "$ref": "#/definitions/EconomyModifier"
+        },
+        "accessibility": {
+          "$ref": "#/definitions/AccessibilityBlock"
+        },
+        "sanctum_ref": {
+          "type": "string"
+        },
+        "provenance": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "guardian_id",
+        "name_working",
+        "animal",
+        "chassis",
+        "launch_wave",
+        "home_region",
+        "identity_line",
+        "difficulty_tag",
+        "bond_charge_profile",
+        "guardian_surge",
+        "economy_modifier",
+        "accessibility",
+        "sanctum_ref",
+        "provenance"
+      ],
+      "additionalProperties": false,
+      "description": "One guardian kit — pure data, no behavior (GDN1). Shape mirrors B4A/B4B §6."
+    },
+    "Chassis": {
+      "type": "string",
+      "enum": [
+        "striker",
+        "bulwark",
+        "oracle",
+        "warden",
+        "skirmisher",
+        "quartermaster"
+      ],
+      "description": "Guardian chassis (B4 §3, pinned data values per B4A §4B)."
+    },
+    "LaunchWave": {
+      "type": "string",
+      "enum": [
+        "launch",
+        "future_wave"
+      ],
+      "description": "Roster wave (B4A §4B; G-D2 — every chassis has ≥1 launch guardian)."
+    },
+    "Region": {
+      "type": "string",
+      "enum": [
+        "Emberreach",
+        "Rimeholt",
+        "Galewrack",
+        "Verdance",
+        "Lumenshoal",
+        "Umbral_Deep"
+      ],
+      "description": "The six elemental regions (World Atlas §3; working names per W-D1). Canonical data form per B4A §4B — matches the B4A/B4B §6 seed objects (display case, underscore for Umbral_Deep)."
+    },
+    "DifficultyTag": {
+      "type": "string",
+      "enum": [
+        "approachable",
+        "standard",
+        "demanding"
+      ],
+      "description": "Honest difficulty tag (B4A §4B; GDN2/GDN5 — affects feel, never viability)."
+    },
+    "BondChargeProfile": {
+      "type": "object",
+      "properties": {
+        "primary_source": {
+          "type": "string"
+        },
+        "secondary_sources": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "bond_charge_fill_rate_target": {
+          "type": "string",
+          "description": "Design-target enum/string (B4A §4B) — not a final numeric balance value."
+        },
+        "bond_charge_reset_or_decay_rule": {
+          "type": "string",
+          "description": "Reset/decay policy string (B4A §4B) — not free implementation behavior."
+        }
+      },
+      "required": [
+        "primary_source",
+        "secondary_sources",
+        "bond_charge_fill_rate_target",
+        "bond_charge_reset_or_decay_rule"
+      ],
+      "additionalProperties": false,
+      "description": "Bond-Charge build profile (B4 §3 chassis leans; C4 secondary-source floor)."
+    },
+    "GuardianSurge": {
+      "type": "object",
+      "properties": {
+        "name_working": {
+          "type": "string"
+        },
+        "duration_turns_target": {
+          "type": "number"
+        },
+        "recharge_target": {
+          "type": "string"
+        },
+        "effect_hooks": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "never": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": [
+              "consumes_aether",
+              "bought_from_economy",
+              "gated_behind_perfect_timing",
+              "mints_resources"
+            ]
+          }
+        }
+      },
+      "required": [
+        "name_working",
+        "duration_turns_target",
+        "recharge_target",
+        "effect_hooks",
+        "never"
+      ],
+      "additionalProperties": false,
+      "description": "Guardian Surge block (B4 §5; GDN3 — combat-only, bounded, `never` flags set; D6 — never economy-bought). `mints_resources` appears on Quartermaster-lean kits per B4B §3 (GDN11)."
+    },
+    "EconomyModifier": {
+      "type": "object",
+      "properties": {
+        "shifts": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/EconomyShift"
+          }
+        },
+        "st5_median_completion_variance_max": {
+          "type": "number"
+        },
+        "st5_tradeoff_required_threshold": {
+          "type": "number"
+        },
+        "projected_st5_variance_target": {
+          "type": "number"
+        },
+        "documented_tradeoff": {
+          "type": "string",
+          "description": "Required in review when a kit sits at/above the variance ceiling (B4A §4C, Nova)."
+        }
+      },
+      "required": [
+        "shifts",
+        "st5_median_completion_variance_max",
+        "st5_tradeoff_required_threshold",
+        "projected_st5_variance_target"
+      ],
+      "additionalProperties": false,
+      "description": "Sidegrade economy modifier (Economy §16; GDN4 variance budget, §4C threshold roles). The numeric thresholds are seed data, not code constants (DC1)."
+    },
+    "EconomyShift": {
+      "type": "object",
+      "properties": {
+        "dir": {
+          "type": "string",
+          "enum": [
+            "+",
+            "-"
+          ]
+        },
+        "target_kind": {
+          "type": "string",
+          "enum": [
+            "source_id",
+            "sink_id",
+            "event_id"
+          ]
+        },
+        "target": {
+          "type": "string"
+        },
+        "effect": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "dir",
+        "target_kind",
+        "target",
+        "effect"
+      ],
+      "additionalProperties": false,
+      "description": "One economy shift, bound to an existing source/sink/event (B4A §4A, GDN11): a shift may re-weight an already-approved faucet/sink/event; it may never create a new resource source. No free-text shift compiles into data — the validator rejects any shift whose target_kind is not one of these three."
+    },
+    "AccessibilityBlock": {
+      "type": "object",
+      "properties": {
+        "assist_parity": {
+          "type": "boolean"
+        },
+        "cues": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": [
+              "shape",
+              "icon",
+              "text"
+            ]
+          }
+        }
+      },
+      "required": [
+        "assist_parity",
+        "cues"
+      ],
+      "additionalProperties": false,
+      "description": "Accessibility conformance block (Doc 06; C2/GDN8 assist parity; never color-only cues)."
+    },
+    "SeedValueMetadata": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "path": {
+          "type": "string"
+        },
+        "unit": {
+          "$ref": "#/definitions/Unit"
+        },
+        "gate": {
+          "type": "string"
+        },
+        "source_doc_section": {
+          "type": "string"
+        },
+        "invariant_refs": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "required": [
+        "id",
+        "path",
+        "unit",
+        "gate",
+        "source_doc_section",
+        "invariant_refs"
+      ],
+      "additionalProperties": false,
+      "description": "DC4 unit-requirement metadata for one numeric seed value (Doc 07 §1.2, DC4; CLAUDE.md §2 — carried even at skeleton stage). `path` is the dot-path of the numeric field under `kit`; the validator enforces that every numeric leaf has exactly one entry and every entry resolves to a numeric leaf."
+    },
+    "Unit": {
+      "type": "string",
+      "enum": [
+        "per_pulse",
+        "per_minute",
+        "per_world_day",
+        "per_run",
+        "per_quest",
+        "flat"
+      ],
+      "description": "Value-cadence vocabulary for seed metadata (Doc 07 §2 / §1.2, DC4)."
+    }
+  },
+  "$id": "hg.guardian_kit_seed",
+  "$comment": "GENERATED from src/contracts/guardian-kit.ts (D39) — do not edit by hand; run `pnpm run schema:generate`."
+}
