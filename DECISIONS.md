@@ -26,7 +26,7 @@ Source: [`docs/foundation/00_DECISION_REGISTER_v0.2.md`](docs/foundation/00_DECI
 | D14 | Full-slot reward behavior | Reward Delivery Resolution Screen + persistent pending state | LOCKED |
 | D15 | Story Claim resource boundary | Finite / non-repeatable / non-compounding | LOCKED |
 | D16 | Combat suspend/resume | Option B — turn-boundary snapshot, no reward reroll | LOCKED |
-| D17 | Docked Cargo handling | Physical, exposed, separate from Claim Ledger; 04B required before ship/cargo implementation | LOCKED (spec delivered as 04B) |
+| D17 | Docked Cargo handling | Physical, exposed, separate from Claim Ledger; 04B required before ship/cargo implementation | LOCKED (spec deferred — annotation: 04B v0.1.2 is now delivered and remains the governing cargo spec before implementation) |
 | D18 | Inbox retention/compaction | Active visible target 100; critical/migration/unresolved/package-linked persist | LOCKED |
 | D19 | Pending Reward Resolution save block | Required persistent block; survives save/load; no duplication | LOCKED |
 | D20 | Expedition reward routing | completion/objective → Claim Ledger; salvage/cargo → Ship Hold/Docked Cargo; story → Story Claim; gear → inventory/locker; Merit/Bond XP → auto-receipts | LOCKED |
