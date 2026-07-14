@@ -1,0 +1,38 @@
+{
+  "_comment": "Deliberately broken fixture (M0 packet §7: 'a deliberately-broken fixture is rejected by CI'). Violations: no schema_version (DC5), chassis outside the B4A §4B enum, free-text economy shift with no bound target_kind (B4A §4A/GDN11), home_region outside the World Atlas §3 enum, string where duration_turns_target must be numeric. The validator MUST reject this file; if it ever passes, validation exits non-zero.",
+  "kit": {
+    "guardian_id": "gdn.broken",
+    "name_working": "Broken",
+    "animal": "Kraken",
+    "chassis": "titan",
+    "launch_wave": "launch",
+    "home_region": "Atlantis",
+    "identity_line": "This fixture must never validate.",
+    "difficulty_tag": "standard",
+    "bond_charge_profile": {
+      "primary_source": "unbound_free_text",
+      "secondary_sources": [],
+      "bond_charge_fill_rate_target": "fast",
+      "bond_charge_reset_or_decay_rule": "none"
+    },
+    "guardian_surge": {
+      "name_working": "Schema Breaker",
+      "duration_turns_target": "three",
+      "recharge_target": "combat_only",
+      "effect_hooks": ["mint_infinite_crowns"],
+      "never": []
+    },
+    "economy_modifier": {
+      "shifts": [
+        { "dir": "+", "target_kind": "free_text", "target": "brand_new_resource_source", "effect": "creates_a_new_source" }
+      ],
+      "st5_median_completion_variance_max": 0.15,
+      "st5_tradeoff_required_threshold": 0.2,
+      "projected_st5_variance_target": 0.5
+    },
+    "accessibility": { "assist_parity": true, "cues": ["color"] },
+    "sanctum_ref": "sanctum.broken",
+    "provenance": "external_borrowed_motif"
+  },
+  "value_metadata": []
+}

@@ -1,0 +1,73 @@
+{
+  "schema_version": "0.1.0",
+  "kit": {
+    "guardian_id": "gdn.nova",
+    "name_working": "Nova",
+    "animal": "Owl",
+    "chassis": "oracle",
+    "launch_wave": "launch",
+    "home_region": "Rimeholt",
+    "identity_line": "See the pattern first, act at the right beat, reveal what's hidden.",
+    "difficulty_tag": "demanding",
+    "bond_charge_profile": {
+      "primary_source": "exploit_revealed_elemental_weakness",
+      "secondary_sources": ["tide_chain_predicted_order", "world_map_scouting_reveal"],
+      "bond_charge_fill_rate_target": "skill_scaled_with_guaranteed_floor",
+      "bond_charge_reset_or_decay_rule": "partial_carry_intra_expedition_full_reset_at_harbor"
+    },
+    "guardian_surge": {
+      "name_working": "Omenlight",
+      "duration_turns_target": 2,
+      "recharge_target": "combat_only_frequent_short_surges",
+      "effect_hooks": ["reveal_weakness_and_tide_order", "party_timing_assist_aura_wider_windows"],
+      "never": ["consumes_aether", "bought_from_economy", "gated_behind_perfect_timing"]
+    },
+    "economy_modifier": {
+      "shifts": [
+        { "dir": "+", "target_kind": "event_id", "target": "world_map_exploration", "effect": "scouting_fog_reveal_value" },
+        { "dir": "-", "target_kind": "event_id", "target": "single_target_attack", "effect": "lower_raw_single_target_damage" }
+      ],
+      "st5_median_completion_variance_max": 0.15,
+      "st5_tradeoff_required_threshold": 0.2,
+      "projected_st5_variance_target": 0.15,
+      "documented_tradeoff": "lowest_raw_single_target_damage_of_trio"
+    },
+    "accessibility": { "assist_parity": true, "cues": ["shape", "icon", "text"] },
+    "sanctum_ref": "sanctum.nova",
+    "provenance": "original_owl_eye_sigil_star_map_wing"
+  },
+  "value_metadata": [
+    {
+      "id": "gdn.nova.surge.duration_turns_target",
+      "path": "kit.guardian_surge.duration_turns_target",
+      "unit": "flat",
+      "gate": "launch",
+      "source_doc_section": "B4A v0.1.2 §3/§6 (design target pending sim)",
+      "invariant_refs": ["GDN3", "DC4"]
+    },
+    {
+      "id": "gdn.nova.economy.st5_median_completion_variance_max",
+      "path": "kit.economy_modifier.st5_median_completion_variance_max",
+      "unit": "flat",
+      "gate": "launch",
+      "source_doc_section": "B4A v0.1.2 §4C/§6 (Economy §16 sidegrade budget)",
+      "invariant_refs": ["GDN4", "DC4"]
+    },
+    {
+      "id": "gdn.nova.economy.st5_tradeoff_required_threshold",
+      "path": "kit.economy_modifier.st5_tradeoff_required_threshold",
+      "unit": "flat",
+      "gate": "launch",
+      "source_doc_section": "B4A v0.1.2 §4C/§6 (hard review threshold)",
+      "invariant_refs": ["GDN4", "DC4"]
+    },
+    {
+      "id": "gdn.nova.economy.projected_st5_variance_target",
+      "path": "kit.economy_modifier.projected_st5_variance_target",
+      "unit": "flat",
+      "gate": "launch",
+      "source_doc_section": "B4A v0.1.2 §3/§6 (at ceiling; documented_tradeoff carried per §4C, GDN4)",
+      "invariant_refs": ["GDN4", "DC4"]
+    }
+  ]
+}

@@ -1,0 +1,72 @@
+{
+  "schema_version": "0.1.0",
+  "kit": {
+    "guardian_id": "gdn.sef",
+    "name_working": "Sef",
+    "animal": "Falcon",
+    "chassis": "skirmisher",
+    "launch_wave": "launch",
+    "home_region": "Lumenshoal",
+    "identity_line": "Move first, hit twice, never be where they swing.",
+    "difficulty_tag": "approachable",
+    "bond_charge_profile": {
+      "primary_source": "fast_tide_chains_early_initiative",
+      "secondary_sources": ["reposition_out_of_telegraph", "first_strike_new_encounter"],
+      "bond_charge_fill_rate_target": "fast",
+      "bond_charge_reset_or_decay_rule": "partial_carry_intra_expedition_full_reset_at_harbor"
+    },
+    "guardian_surge": {
+      "name_working": "Quicklight Gambit",
+      "duration_turns_target": 2,
+      "recharge_target": "combat_only_frequent_short_surges",
+      "effect_hooks": ["party_initiative_tempo_boost", "one_bonus_reposition_per_turn_no_damage_packet"],
+      "never": ["consumes_aether", "bought_from_economy", "gated_behind_perfect_timing"]
+    },
+    "economy_modifier": {
+      "shifts": [
+        { "dir": "+", "target_kind": "event_id", "target": "expedition_completion", "effect": "faster_expedition_turnaround" },
+        { "dir": "-", "target_kind": "event_id", "target": "defended_raid_reward", "effect": "lower_raid_salvage_yield" }
+      ],
+      "st5_median_completion_variance_max": 0.15,
+      "st5_tradeoff_required_threshold": 0.2,
+      "projected_st5_variance_target": 0.11
+    },
+    "accessibility": { "assist_parity": true, "cues": ["shape", "icon", "text"] },
+    "sanctum_ref": "sanctum.sef",
+    "provenance": "original_falcon_dart_light_trail"
+  },
+  "value_metadata": [
+    {
+      "id": "gdn.sef.surge.duration_turns_target",
+      "path": "kit.guardian_surge.duration_turns_target",
+      "unit": "flat",
+      "gate": "launch",
+      "source_doc_section": "B4B v0.2.1 §2/§6 (design target pending sim)",
+      "invariant_refs": ["GDN3", "DC4"]
+    },
+    {
+      "id": "gdn.sef.economy.st5_median_completion_variance_max",
+      "path": "kit.economy_modifier.st5_median_completion_variance_max",
+      "unit": "flat",
+      "gate": "launch",
+      "source_doc_section": "B4B v0.2.1 §6; B4A v0.1.2 §4C (Economy §16 sidegrade budget)",
+      "invariant_refs": ["GDN4", "DC4"]
+    },
+    {
+      "id": "gdn.sef.economy.st5_tradeoff_required_threshold",
+      "path": "kit.economy_modifier.st5_tradeoff_required_threshold",
+      "unit": "flat",
+      "gate": "launch",
+      "source_doc_section": "B4B v0.2.1 §6; B4A v0.1.2 §4C (hard review threshold)",
+      "invariant_refs": ["GDN4", "DC4"]
+    },
+    {
+      "id": "gdn.sef.economy.projected_st5_variance_target",
+      "path": "kit.economy_modifier.projected_st5_variance_target",
+      "unit": "flat",
+      "gate": "launch",
+      "source_doc_section": "B4B v0.2.1 §2/§6 (projection pending sim, GDN4)",
+      "invariant_refs": ["GDN4", "DC4"]
+    }
+  ]
+}

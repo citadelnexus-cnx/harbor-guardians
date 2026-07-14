@@ -1,0 +1,72 @@
+{
+  "schema_version": "0.1.0",
+  "kit": {
+    "guardian_id": "gdn.dagg",
+    "name_working": "Dagg",
+    "animal": "Badger",
+    "chassis": "quartermaster",
+    "launch_wave": "launch",
+    "home_region": "Umbral_Deep",
+    "identity_line": "Protect what's stored, waste nothing, turn a bad raid into a smaller loss.",
+    "difficulty_tag": "standard",
+    "bond_charge_profile": {
+      "primary_source": "protect_harbor_assets_in_raid",
+      "secondary_sources": ["unload_docked_cargo_before_resolution", "complete_supply_contract"],
+      "bond_charge_fill_rate_target": "steady",
+      "bond_charge_reset_or_decay_rule": "slow_decay_out_of_combat_no_cross_harbor_carry"
+    },
+    "guardian_surge": {
+      "name_working": "Warden's Ledger",
+      "duration_turns_target": 3,
+      "recharge_target": "combat_only_favors_raid_defense",
+      "effect_hooks": ["bounded_raid_loss_reduction_never_zero", "improve_roll_within_existing_reward_table"],
+      "never": ["consumes_aether", "bought_from_economy", "gated_behind_perfect_timing", "mints_resources"]
+    },
+    "economy_modifier": {
+      "shifts": [
+        { "dir": "+", "target_kind": "event_id", "target": "defended_raid_reward", "effect": "improved_roll_within_existing_reward_table" },
+        { "dir": "-", "target_kind": "event_id", "target": "combat_damage_output", "effect": "lower_offensive_damage" }
+      ],
+      "st5_median_completion_variance_max": 0.15,
+      "st5_tradeoff_required_threshold": 0.2,
+      "projected_st5_variance_target": 0.14
+    },
+    "accessibility": { "assist_parity": true, "cues": ["shape", "icon", "text"] },
+    "sanctum_ref": "sanctum.dagg",
+    "provenance": "original_badger_ledger_tide_vault"
+  },
+  "value_metadata": [
+    {
+      "id": "gdn.dagg.surge.duration_turns_target",
+      "path": "kit.guardian_surge.duration_turns_target",
+      "unit": "flat",
+      "gate": "launch",
+      "source_doc_section": "B4B v0.2.1 §3/§6 (design target pending sim)",
+      "invariant_refs": ["GDN3", "GDN11", "DC4"]
+    },
+    {
+      "id": "gdn.dagg.economy.st5_median_completion_variance_max",
+      "path": "kit.economy_modifier.st5_median_completion_variance_max",
+      "unit": "flat",
+      "gate": "launch",
+      "source_doc_section": "B4B v0.2.1 §6; B4A v0.1.2 §4C (Economy §16 sidegrade budget)",
+      "invariant_refs": ["GDN4", "DC4"]
+    },
+    {
+      "id": "gdn.dagg.economy.st5_tradeoff_required_threshold",
+      "path": "kit.economy_modifier.st5_tradeoff_required_threshold",
+      "unit": "flat",
+      "gate": "launch",
+      "source_doc_section": "B4B v0.2.1 §6; B4A v0.1.2 §4C (hard review threshold)",
+      "invariant_refs": ["GDN4", "DC4"]
+    },
+    {
+      "id": "gdn.dagg.economy.projected_st5_variance_target",
+      "path": "kit.economy_modifier.projected_st5_variance_target",
+      "unit": "flat",
+      "gate": "launch",
+      "source_doc_section": "B4B v0.2.1 §3/§6 (projection pending sim, GDN4)",
+      "invariant_refs": ["GDN4", "DC4"]
+    }
+  ]
+}
