@@ -19,6 +19,9 @@
  *   - 10_WORLD_ATLAS_FOUNDATION v0.2.1 §13 (W1–W9)
  *   - 11_FACTION_CODEX_FOUNDATION v0.1.2 §9 (FCT1–FCT8)
  *   - 12_GUARDIAN_SANCTUM_AND_KIT_FOUNDATION v0.1.2 §9 (GDN1–GDN11)
+ *   - 15_EVENT_SYSTEM_SPEC v0.2 §5 (EVT1–EVT10 — registered at Alpha A0 as
+ *     fail-loud stubs only, per owner Alpha A0 authorization 2026-07-15;
+ *     no event logic exists and none is authorized until A1)
  * Invariant refs: the registry itself IS the claim-to-test index (all suites).
  */
 
@@ -92,6 +95,7 @@ export const EXPECTED_SUITE_COUNTS: Readonly<Record<Suite, number>> = {
   W: 9,
   FCT: 8,
   GDN: 11,
+  EVT: 10,
 };
 
 export const INVARIANT_REGISTRY: readonly InvariantEntry[] = [
@@ -260,6 +264,20 @@ export const INVARIANT_REGISTRY: readonly InvariantEntry[] = [
   stub("GDN9", "GDN", "The Rite state transition is atomic: prior guardian preserved as dormant, new active applied in one committed step, no duplication; a failed/interrupted Rite leaves the prior guardian active.", "12_GUARDIAN_SANCTUM_AND_KIT_FOUNDATION v0.1.2 §9"),
   stub("GDN10", "GDN", "Persistent guardian bond state and combat-only state are separate save blocks; save/load cannot convert one into the other (combat-only persists only inside a turn-boundary suspend snapshot, D16/C8).", "12_GUARDIAN_SANCTUM_AND_KIT_FOUNDATION v0.1.2 §9"),
   stub("GDN11", "GDN", "Guardian kits cannot create new resource sources; any reward modifier attaches to an existing approved event/source and stays within the sidegrade budget — no kit is a hidden faucet.", "12_GUARDIAN_SANCTUM_AND_KIT_FOUNDATION v0.1.2 §9"),
+
+  // ── Event System (EVT1–EVT10) — 15_EVENT_SYSTEM_SPEC v0.2 §5 ──────────────
+  // Registered at Alpha A0 (owner authorization 2026-07-15) as fail-loud stubs
+  // only. No event lifecycle logic exists; none is authorized before A1.
+  stub("EVT1", "EVT", "Every event is pure data validated against schema; no event hard-codes gameplay numbers.", "15_EVENT_SYSTEM_SPEC v0.2 §5"),
+  stub("EVT2", "EVT", "The lifecycle state machine is deterministic: same state + seed ⇒ same transition.", "15_EVENT_SYSTEM_SPEC v0.2 §5"),
+  stub("EVT3", "EVT", "Events are save-atomic: an event mid-flight persists and resumes exactly once; never duplicates or drops effects across save/load (S7).", "15_EVENT_SYSTEM_SPEC v0.2 §5"),
+  stub("EVT4", "EVT", "Trigger conditions reference only observable state; no hidden-information gating (player-trust / OB5).", "15_EVENT_SYSTEM_SPEC v0.2 §5"),
+  stub("EVT5", "EVT", "Every reward effect routes through the Claim Ledger; no event grants resources ambiently (L-suite).", "15_EVENT_SYSTEM_SPEC v0.2 §5"),
+  stub("EVT6", "EVT", "No event creates a new resource source; economy effects bind to an existing source/sink/event_id (E15/GDN11).", "15_EVENT_SYSTEM_SPEC v0.2 §5"),
+  stub("EVT7", "EVT", "Expiry/decline is fair: the player was warned within a foreseeable window before any loss (D35/D32).", "15_EVENT_SYSTEM_SPEC v0.2 §5"),
+  stub("EVT8", "EVT", "No event causes hidden loss; all losses are shown, attributable, and within the loss boundaries defined by Economy (E12/E13), Claim Ledger (L-suite), Cargo (CARGO-suite), Threat Director (TD-suite), and Save/Load (S7) doctrine.", "15_EVENT_SYSTEM_SPEC v0.2 §5"),
+  stub("EVT9", "EVT", "Raids (TD) validate as conformant threat-class events — the framework does not break the proven raid implementation.", "15_EVENT_SYSTEM_SPEC v0.2 §5"),
+  stub("EVT10", "EVT", "Multi-step chains advance atomically; a chain cannot double-grant or skip a step across save/load.", "15_EVENT_SYSTEM_SPEC v0.2 §5"),
 ];
 
 /** Addressable lookup (M0 packet §8: every ID is addressable). */
