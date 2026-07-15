@@ -1,0 +1,72 @@
+# Harbor Guardians — CI gate (M0 Step 9).
+# Governing docs: M0 packet §4 (CI on every push: typecheck → lint → schema
+# validation → sim-harness; red CI blocks merge) + §8 (harness/save-load in CI)
+# + §7/DC5 (a /data file that fails its schema blocks the build, including
+# proof that the deliberate negative fixture is rejected).
+#
+# Headless only: no GUI window is opened; `cargo check` compiles the Tauri
+# shell without running it. No secrets are read; no artifacts are published;
+# nothing deploys. windows-latest mirrors the owner's verified Windows/MSVC
+# environment (M0 packet §5: "CI mirrors these versions so local and CI agree").
+name: ci
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  ci:
+    name: ci
+    runs-on: windows-latest
+    timeout-minutes: 40
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v4 # reads pinned "packageManager" from package.json
+
+      - name: Set up Node 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Typecheck
+        run: pnpm run typecheck
+
+      - name: Lint
+        run: pnpm run lint
+
+      - name: Schema validation (D39 drift guard + DC4/DC5, broken fixture must be rejected)
+        run: pnpm run schema:validate
+
+      - name: Sim-harness smoke (headless, fixed seeds)
+        run: pnpm run sim:harness
+
+      - name: Save/load tests (S7 atomic save + empty-state round-trip)
+        run: pnpm run test:save
+
+      - name: Rust toolchain versions (runner-preinstalled stable/MSVC)
+        run: |
+          rustc --version
+          cargo --version
+
+      - name: Rust cache (src-tauri)
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri
+
+      - name: Tauri shell compile check (headless; no window, no bundle)
+        run: cargo check --locked
+        working-directory: src-tauri
