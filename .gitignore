@@ -12,3 +12,6 @@ sim-harness/reports/
 
 # Local transfer/staging kit; docs are installed under /docs
 _kit/
+
+# Local audit evidence report (read-only audit output, not doctrine)
+AUDIT_EVIDENCE.md
