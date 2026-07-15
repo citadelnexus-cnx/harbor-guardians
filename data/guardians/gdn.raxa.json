@@ -17,7 +17,7 @@
     },
     "guardian_surge": {
       "name_working": "Emberbreak",
-      "duration_turns_target": "three",
+      "duration_turns_target": 3,
       "recharge_target": "combat_only_1_per_2to3_encounters",
       "effect_hooks": ["bonus_burst_vs_breached_lane", "surge_widened_chain_window"],
       "never": ["consumes_aether", "bought_from_economy", "gated_behind_perfect_timing"]
