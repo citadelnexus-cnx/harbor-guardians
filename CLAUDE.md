@@ -41,9 +41,9 @@ Escalation = stop work, state the gap and the decision it blocks, and wait. Do n
 
 ## 7. Scope discipline
 
-Milestone N+1 does not begin until milestone N is stable and **tested**. Current scope: **Milestone 0 only** (environment, repo, docs, schemas, sim-harness skeleton, save/load skeleton, CI). No gameplay, no Alpha work, no deployment. Alpha requires the M0 §12 checklist fully green **and a separate owner authorization**.
+Milestone N+1 does not begin until milestone N is stable and **tested**. Milestone 0 is **closed** (see `M0_EXIT_EVIDENCE.md`). Current scope: **Alpha A0 only** — planning and harness preparation, per a private owner authorization dated 2026-07-15; the A0 boundary is recorded in `docs/alpha/ALPHA_A0_EXECUTION_BRIEF_v0.1.md`. **Alpha A1 is not authorized. Gameplay implementation is not authorized.** No event logic, no UI gameplay, no deployment. Any scope beyond A0 requires a separate owner approval.
 
-This scope section is amended only by a new owner authorization record (held privately outside this public repo, like the M0 record). If you believe scope has expanded, verify with the owner against the latest authorization record before acting — never assume.
+This scope section is amended only by a new owner authorization record (held privately outside this public repo, like the M0 and A0 records). If you believe scope has expanded, verify with the owner against the latest authorization record before acting — never assume.
 
 ## 8. Traceability
 

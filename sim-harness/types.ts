@@ -12,7 +12,9 @@
  *   - M0 packet §8 (every invariant ID registered as an addressable,
  *     fail-loud stub until its feature is implemented)
  * Invariant refs: registry carries E/L/M/C/S/OPS/CARGO/TD/A11Y/UX/DC/OB/GEAR/
- * W/FCT/GDN suites; DC1 (ids resolve to seeds) applies when checks land.
+ * W/FCT/GDN/EVT suites; DC1 (ids resolve to seeds) applies when checks land.
+ * EVT1–EVT10 registered at Alpha A0 (15_EVENT_SYSTEM_SPEC v0.2 §5) as
+ * fail-loud stubs only — no event logic exists (A0 authorizes no gameplay).
  */
 
 /** Suite names, per Sim spec §4 + Doc 07 §3 `sim_invariant.id` prefixes. */
@@ -32,7 +34,8 @@ export type Suite =
   | "GEAR" // Gear / item rewards — Doc 09 §8
   | "W" // World Atlas — Doc 10 §13
   | "FCT" // Faction Codex — Doc 11 §9
-  | "GDN"; // Guardian Sanctum & Kit — Doc 12 §9
+  | "GDN" // Guardian Sanctum & Kit — Doc 12 §9
+  | "EVT"; // Event System — 15_EVENT_SYSTEM_SPEC v0.2 §5 (registered A0; stubs only)
 
 /**
  * Implementation status of an invariant check.
@@ -107,7 +110,7 @@ export interface InvariantResult {
 /** Machine-readable batch report (Sim §2/§5 skeleton; grows with real suites). */
 export interface HarnessReport {
   readonly harness: "harbor-guardians sim-harness";
-  readonly milestone: "M0";
+  readonly milestone: "M0" | "A0";
   readonly seed: number;
   readonly registry_counts: Readonly<Record<Suite, number>> & { readonly total?: never };
   readonly total_invariants: number;
