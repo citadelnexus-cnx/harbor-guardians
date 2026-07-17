@@ -41,6 +41,7 @@ import {
 } from "node:fs";
 import type { SaveBlob } from "../contracts/save-blob.js";
 import { canonicalSerialize } from "./canonical-json.js";
+import { migrateSaveBlobToCurrent } from "./migrations.js";
 import type { SaveBlobValidator } from "./save-blob-validator.js";
 
 /** Temp-write location for a slot — same directory, so the commit rename is atomic. */
@@ -145,12 +146,16 @@ export function saveAtomically(slotPath: string, blob: SaveBlob, options: Atomic
 }
 
 /**
- * Load the active slot ONLY (never the temp file), schema-validating before
- * returning — a partial or foreign file never comes back as a save.
+ * Load the active slot ONLY (never the temp file). An older save is brought
+ * forward by the ordered, pure migration chain (Save/Load §1/§14) IN MEMORY —
+ * the on-disk file is never mutated by a load. The (possibly migrated) blob
+ * is schema-validated before returning — a partial, foreign, or
+ * future-version file never comes back as a save.
  */
 export function loadSave(slotPath: string, validate: SaveBlobValidator): SaveBlob {
   const raw = readFileSync(slotPath, "utf8");
   const parsed: unknown = JSON.parse(raw);
-  validate(parsed);
-  return parsed;
+  const migrated = migrateSaveBlobToCurrent(parsed);
+  validate(migrated);
+  return migrated;
 }

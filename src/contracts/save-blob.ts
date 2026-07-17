@@ -1,39 +1,52 @@
 /**
- * save_blob data contract — the Save/Load §16 block list at M0 empty-shell
- * scope. Doc 07 §3 catalogs `save_blob` as a schema type; per D39 these TS
- * types are the source of truth and /schema/save_blob.schema.json is
- * GENERATED from them — never hand-authored.
+ * save_blob data contract — the Save/Load §16 block list at Alpha A2 scope.
+ * Doc 07 §3 catalogs `save_blob` as a schema type; per D39 these TS types are
+ * the source of truth and /schema/save_blob.schema.json is GENERATED from
+ * them — never hand-authored.
  *
- * M0 scope (M0 packet §8: "round-trips an empty/minimal state"):
- *   - meta / world_clock / resources / threat carry their minimal real shape.
- *   - Every content-bearing block is mechanically EMPTY at schema level
- *     (empty tuple / empty map / null): the schema itself rejects content
- *     state before its feature exists. Growing any block is a
- *     `save_schema_version` bump = a migration event (Save/Load §14,
- *     Doc 07 §6) — content cannot be smuggled in without a migration.
+ * Scope history:
+ *   - M0 (v1): meta / world_clock / resources / threat carry their minimal
+ *     real shape; every content-bearing block is mechanically EMPTY at schema
+ *     level (empty tuple / empty map / null) so content cannot be smuggled in
+ *     without a migration (Save/Load §14, Doc 07 §6).
+ *   - A1 (still v1): `resources` carries real stocked 3S bands; no shape
+ *     change, no bump.
+ *   - A2 (v2 — owner Alpha A2 authorization 2026-07-17): `claim_ledger` and
+ *     `pending_reward_resolution` grow their real Doc 04/Save-Load shapes
+ *     (packages + story claims + remainders; persistent pending records).
+ *     The v1→v2 migration lives in src/save/migrations.ts with a committed
+ *     v1 fixture + round-trip test (Save/Load §14). The §14 Migration Notice
+ *     is FUTURE BUILD with the System Inbox itself (M6 remains fail-loud;
+ *     no message system exists at A2).
  *   - `combat_suspend?` (optional in §16) is deliberately absent until the
  *     D16/C8 combat-suspend feature lands; its migration adds it.
  *
  * Governing docs:
  *   - SAVE_LOAD_TIME_RECONCILIATION_SPEC v0.5 §1 (versioning), §2 (UTC
- *     timestamp + World Clock day index/time-of-day), §16 (block list)
+ *     timestamp + World Clock day index/time-of-day), §10/§11 (ledger +
+ *     pending persistence), §14 (migration), §16 (block list)
+ *   - 04_REWARD_CLAIM_LEDGER_FOUNDATION v0.4 §10/§13 (package + pending
+ *     save shapes)
  *   - 07_CONTENT_SCHEMA_AND_DATA_CONTRACTS_SPEC v0.1.2 §3 (save_blob),
  *     §2 (CoreResource/RaidPhase vocab), §7 (DC5 versioned, DC6 boundary)
- * Invariant refs: S5, S7, DC5, DC6 (resources key on CoreResource only).
+ * Invariant refs: S5, S7, DC5, DC6 (resources key on CoreResource only);
+ * L5/L6/L7/L11/L14 (ledger + pending blocks persist exactly).
  *
  * No gameplay numbers live here: the blob is player STATE, not a tuned seed.
  * Empty-state zeros are the identity state; real start stocks arrive from
- * /data resource_definition seeds at Alpha (Economy §3/§7, DC1/DC4).
+ * /data resource_definition seeds (Economy §3/§7, DC1/DC4).
  */
 
+import type { ClaimLedgerState, PendingRewardResolution } from "./claim-ledger.js";
 import type { CoreResource, RaidPhase } from "./enums.js";
 
 /**
  * Current save schema version (infrastructure version, not a gameplay value).
- * Bumping it is a migration event: function + fixture + round-trip test +
- * Migration Notice (Save/Load §14, M6).
+ * Bumping it is a migration event: function + fixture + round-trip test
+ * (Save/Load §14; the M6 Migration Notice is FUTURE BUILD with the inbox).
+ * v1 = M0/A1 empty-ledger shell · v2 = A2 claim_ledger + pending blocks.
  */
-export const SAVE_SCHEMA_VERSION = 1;
+export const SAVE_SCHEMA_VERSION = 2;
 
 /** Save/Load §1/§2: versions + absolute UTC timestamp (ISO-8601). */
 export interface SaveMeta {
@@ -89,10 +102,10 @@ export interface SaveBlob {
   /** WorkerState records land with the Economy feature. */
   workers: EmptyListM0;
   threat: ThreatBlock;
-  /** claim_package records (Doc 04 §13; story claims + remainders live inside packages). */
-  claim_ledger: { packages: EmptyListM0 };
-  /** pending_reward_resolution records (Save/Load §11, L14). */
-  pending_reward_resolution: EmptyListM0;
+  /** Claim Ledger block (Save/Load §16: packages + story claims + remainders) — real shape since A2 (v2). */
+  claim_ledger: ClaimLedgerState;
+  /** Persistent pending_reward_resolution records (Doc 04 §10; Save/Load §11; D19/L14) — real shape since A2 (v2). */
+  pending_reward_resolution: PendingRewardResolution[];
   /** system_message records (Save/Load §12, M8). */
   system_messages: EmptyListM0;
   /** Per-faction Merit standing (soulbound; never in 3S bands — DC6/FCT1). */

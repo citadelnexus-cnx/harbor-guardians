@@ -19,6 +19,9 @@ export const SAVE_BLOB_SCHEMA_FILE = "schema/save_blob.schema.json";
 export const RESOURCE_STORAGE_SCHEMA_ID = "hg.resource_storage_seed";
 export const RESOURCE_STORAGE_SCHEMA_FILE = "schema/resource_storage_seed.schema.json";
 
+export const CLAIM_LEDGER_RULES_SCHEMA_ID = "hg.claim_ledger_rules_seed";
+export const CLAIM_LEDGER_RULES_SCHEMA_FILE = "schema/claim_ledger_rules_seed.schema.json";
+
 function generateFrom(sourcePath, typeName, schemaId) {
   const generator = createGenerator({
     tsconfig: "tsconfig.json",
@@ -52,11 +55,21 @@ export function buildResourceStorageSeedSchema() {
   return generateFrom("src/contracts/resource-storage.ts", "ResourceStorageSeed", RESOURCE_STORAGE_SCHEMA_ID);
 }
 
+/**
+ * claim_ledger_rules_seed schema (Doc 04 §5/§15; Economy §10) — Alpha A2
+ * Claim Ledger slot-accounting caps. Gameplay numbers seeded, never coded
+ * (DC1); full DC4 metadata envelope.
+ */
+export function buildClaimLedgerRulesSeedSchema() {
+  return generateFrom("src/contracts/claim-ledger-rules.ts", "ClaimLedgerRulesSeed", CLAIM_LEDGER_RULES_SCHEMA_ID);
+}
+
 /** Every generated schema, one entry per /schema output file (drift-guarded in validate-data.mjs). */
 export const SCHEMA_BUILDS = [
   { file: SCHEMA_FILE, build: buildGuardianKitSeedSchema },
   { file: SAVE_BLOB_SCHEMA_FILE, build: buildSaveBlobSchema },
   { file: RESOURCE_STORAGE_SCHEMA_FILE, build: buildResourceStorageSeedSchema },
+  { file: CLAIM_LEDGER_RULES_SCHEMA_FILE, build: buildClaimLedgerRulesSeedSchema },
 ];
 
 export function serializeSchema(schema) {

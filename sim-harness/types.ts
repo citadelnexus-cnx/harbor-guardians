@@ -110,7 +110,7 @@ export interface InvariantResult {
 /** Machine-readable batch report (Sim §2/§5 skeleton; grows with real suites). */
 export interface HarnessReport {
   readonly harness: "harbor-guardians sim-harness";
-  readonly milestone: "M0" | "A0" | "A1";
+  readonly milestone: "M0" | "A0" | "A1" | "A2";
   readonly seed: number;
   readonly registry_counts: Readonly<Record<Suite, number>> & { readonly total?: never };
   readonly total_invariants: number;

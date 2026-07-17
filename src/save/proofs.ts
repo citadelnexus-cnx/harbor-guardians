@@ -1,26 +1,40 @@
 /**
  * Save/load proofs — the executable evidence behind S5 (round-trip) and S7
- * (atomic save integrity). S5 runs at two scopes: the M0 empty-shell
- * round-trip and, since Alpha A1, the stocked harbor-state round-trip
- * (seeded 3S storage bands incl. Crowns — owner A1 authorization,
- * 2026-07-16). One implementation, two consumers: `tests/save-load.test.ts`
- * and the sim-harness registry checks (claim-to-test, CLAUDE.md §3 — the
- * harness is the arbiter of "done").
+ * (atomic save integrity). S5 runs at three scopes: the M0 empty-shell
+ * round-trip; the Alpha A1 stocked harbor-state round-trip (seeded 3S
+ * storage bands incl. Crowns — owner A1 authorization, 2026-07-16); and the
+ * Alpha A2 reward-bearing round-trip (Claim Ledger packages incl. partial
+ * remainders, Story Claims, and pending_reward_resolution — owner A2
+ * authorization, 2026-07-17). S7 runs its crash simulation over the A2
+ * reward-bearing state, so "a simulated crash never duplicates rewards" is
+ * exercised against actual reward state (the M0 limitation "reward-
+ * duplication portion is future" is closed at A2 scope). One implementation,
+ * two consumers: `tests/save-load.test.ts` and the sim-harness registry
+ * checks (claim-to-test, CLAUDE.md §3 — the harness is the arbiter of
+ * "done").
  *
  * Detail strings are deterministic (no paths, no wall-clock) so the harness
  * repeat-run determinism proof holds over them.
  *
- * Governing docs: SAVE_LOAD_TIME_RECONCILIATION_SPEC v0.5 §15/§16;
- * SIM_HARNESS_ACCEPTANCE_SPEC v0.6.2 §4.6 (S5/S7), §7 ("Milestone 0 exit:
- * … S5/S7 pass on the empty shell"), §8 (evidence rules).
- * Invariant refs: S5, S7.
+ * Governing docs: SAVE_LOAD_TIME_RECONCILIATION_SPEC v0.5 §10/§11/§15/§16;
+ * 04_REWARD_CLAIM_LEDGER_FOUNDATION v0.4 §5/§7/§10/§13;
+ * SIM_HARNESS_ACCEPTANCE_SPEC v0.6.2 §4.6 (S5/S7), §7, §8 (evidence rules).
+ * Invariant refs: S5, S7; the A2 state builder feeds L5/L6/L7/L11/L14 checks.
  */
 
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
+import type { ClaimLedgerRulesSeed } from "../contracts/claim-ledger-rules.js";
+import type { ClaimLedgerState, PendingRewardResolution } from "../contracts/claim-ledger.js";
 import type { ResourceStorageSeed } from "../contracts/resource-storage.js";
-import type { SaveBlob } from "../contracts/save-blob.js";
-import { CORE_RESOURCES, createHarborState, deposit, fromResourceBands, toResourceBands } from "../sim/harbor-state.js";
+import type { SaveBlob, WorldClock } from "../contracts/save-blob.js";
+import {
+  assertClaimStateValid,
+  claimPackage,
+  createClaimLedgerState,
+  routeRewardPackage,
+} from "../sim/claim-ledger.js";
+import { CORE_RESOURCES, createHarborState, deposit, fromResourceBands, toResourceBands, type HarborState } from "../sim/harbor-state.js";
 import { canonicalSerialize } from "./canonical-json.js";
 import { loadSave, rollbackPath, saveAtomically, tempPath, type CrashSimulationHooks } from "./atomic-save.js";
 import { createEmptySaveBlob } from "./empty-save.js";
@@ -163,15 +177,154 @@ export function proveStockedStateRoundTrip(
 }
 
 /**
- * S7 @ M0: a known-good save must survive — byte-identical and loadable — a
- * simulated crash at every pre-commit pipeline point, plus a schema-validation
- * abort; a subsequent successful save must swap in the new state and preserve
- * the prior good save as rollback.
+ * Deterministic reward-bearing state for the A2 proofs, driven ENTIRELY by
+ * seed values (No Magic Numbers): the world-creation harbor plus a Claim
+ * Ledger exercising every A2 structure — the Crowns per-resource slot cap
+ * filled exactly (Doc 04 §5), one overflow package held as a persistent
+ * pending record (Doc 04 §10), one package partially claimed to a held
+ * remainder at the Iron 3S hard stop (Doc 04 §7, L6), and one Story Claim
+ * (Doc 04 §6).
  */
-export function proveCrashDuringWriteSurvival(dir: string, validate: SaveBlobValidator): ProofResult {
+export function buildRewardBearingState(
+  storageSeed: ResourceStorageSeed,
+  rulesSeed: ClaimLedgerRulesSeed,
+  worldClock: WorldClock,
+): { harbor: HarborState; ledger: ClaimLedgerState; pending: readonly PendingRewardResolution[] } {
+  const rules = rulesSeed.rules;
+  let harbor = createHarborState(storageSeed);
+  let ledger = createClaimLedgerState();
+  let pending: readonly PendingRewardResolution[] = [];
+
+  // Fill the Crowns per-resource cap exactly, then overflow into pending.
+  const crownsAmount = storageSeed.storage.Crowns.safe_capacity_st1;
+  for (let i = 0; i < rules.max_unclaimed_packages_per_resource; i += 1) {
+    const routed = routeRewardPackage(ledger, pending, {
+      package_id: `proof.crowns.${i}`,
+      source_type: "test_supplied",
+      source_event_id: `proof.event.crowns.${i}`,
+      generated_reward_seed: i,
+      created_world_clock: worldClock,
+      lines: [{ line_id: `proof.crowns.${i}.a`, route: "claim_ledger", resource: "Crowns", amount: crownsAmount }],
+    }, rules);
+    ledger = routed.ledger;
+    pending = routed.pending;
+  }
+  const overflow = routeRewardPackage(ledger, pending, {
+    package_id: "proof.crowns.overflow",
+    source_type: "test_supplied",
+    source_event_id: "proof.event.crowns.overflow",
+    generated_reward_seed: rules.max_unclaimed_packages_per_resource,
+    created_world_clock: worldClock,
+    lines: [{ line_id: "proof.crowns.overflow.a", route: "claim_ledger", resource: "Crowns", amount: crownsAmount }],
+  }, rules);
+  ledger = overflow.ledger;
+  pending = overflow.pending;
+
+  // A mixed package: Iron to the Ledger (claimed partially below), Provisions to a Story Claim.
+  const ironAmount = storageSeed.storage.Iron.total_capacity_st1;
+  const mixed = routeRewardPackage(ledger, pending, {
+    package_id: "proof.mixed",
+    source_type: "test_supplied",
+    source_event_id: "proof.event.mixed",
+    generated_reward_seed: 0,
+    created_world_clock: worldClock,
+    lines: [
+      { line_id: "proof.mixed.iron", route: "claim_ledger", resource: "Iron", amount: ironAmount },
+      { line_id: "proof.mixed.story", route: "story_claim", resource: "Provisions", amount: storageSeed.storage.Provisions.start_stock },
+    ],
+  }, rules);
+  ledger = mixed.ledger;
+  pending = mixed.pending;
+
+  // Partial claim to the 3S hard stop: Iron start_stock occupies room, so a
+  // total-capacity claim leaves exactly start_stock held as remainder (L6).
+  const claimed = claimPackage(ledger, harbor, "proof.mixed", "claim_to_capacity");
+  ledger = claimed.ledger;
+  harbor = claimed.harbor;
+
+  assertClaimStateValid(ledger, pending);
+  return { harbor, ledger, pending };
+}
+
+/**
+ * S5 @ A2: the REWARD-BEARING state round-trips byte-identically — Claim
+ * Ledger packages (incl. a partial-claim held remainder), a Story Claim, and
+ * a persistent pending_reward_resolution record all survive save → load
+ * exactly (Save/Load §10/§11; L5/L14 feed on this proof through the harness
+ * ledger checks). All amounts and counts are seed values (No Magic Numbers).
+ */
+export function proveLedgerStateRoundTrip(
+  dir: string,
+  validate: SaveBlobValidator,
+  storageSeed: ResourceStorageSeed,
+  rulesSeed: ClaimLedgerRulesSeed,
+): ProofResult {
+  const slot = join(dir, "ledger-roundtrip.save.json");
+  const worldClock: WorldClock = { day_index: 0, time_of_day: 0 };
+  const { harbor, ledger, pending } = buildRewardBearingState(storageSeed, rulesSeed, worldClock);
+
+  const blob: SaveBlob = {
+    ...createEmptySaveBlob({ game_version: PROOF_GAME_VERSION, last_saved_utc: PROOF_UTC_V1 }),
+    resources: toResourceBands(harbor),
+    claim_ledger: ledger,
+    pending_reward_resolution: [...pending],
+  };
+
+  saveAtomically(slot, blob, { validate });
+  const onDisk = readFileSync(slot, "utf8");
+  const loaded = loadSave(slot, validate);
+  if (canonicalSerialize(loaded) !== onDisk) {
+    return failed("S5 ledger round-trip: save→load→re-serialize NOT byte-identical for the reward-bearing state");
+  }
+  if (canonicalSerialize(loaded.claim_ledger) !== canonicalSerialize(ledger)) {
+    return failed("S5 ledger round-trip: claim_ledger block changed across save/load — hidden reward loss/mutation");
+  }
+  if (canonicalSerialize(loaded.pending_reward_resolution) !== canonicalSerialize(pending)) {
+    return failed("S5 ledger round-trip: pending_reward_resolution block changed across save/load (L14 feed)");
+  }
+  // Loading twice must not duplicate anything (reload-no-duplication feed for L14).
+  const reloaded = loadSave(slot, validate);
+  if (canonicalSerialize(reloaded) !== canonicalSerialize(loaded)) {
+    return failed("S5 ledger round-trip: repeated load produced a different state — reload duplication/mutation");
+  }
+  assertClaimStateValid(loaded.claim_ledger, loaded.pending_reward_resolution);
+
+  return {
+    pass: true,
+    detail:
+      `A2 scope: reward-bearing save (Claim Ledger with the seeded Crowns per-resource cap filled, ` +
+      `a partial-claim held remainder at the Iron 3S hard stop, ${ledger.story_claims.length} Story Claim(s), ` +
+      `${pending.length} persistent pending record(s)) save→load→re-serialize byte-identical; claim_ledger and ` +
+      `pending_reward_resolution blocks preserved exactly; repeated load byte-identical (no reload duplication). ` +
+      `All amounts/counts from schema-validated seeds.`,
+  };
+}
+
+/**
+ * S7 @ A2: a known-good REWARD-BEARING save must survive — byte-identical and
+ * loadable — a simulated crash at every pre-commit pipeline point, plus a
+ * schema-validation abort; a subsequent successful save must swap in the new
+ * state and preserve the prior good save as rollback. Because the prior save
+ * (with its ledger packages, story claim, held remainder, and pending record)
+ * is byte-identical after every crash, and a failed save never commits, a
+ * crash can neither duplicate nor lose a reward (Save/Load §15).
+ */
+export function proveCrashDuringWriteSurvival(
+  dir: string,
+  validate: SaveBlobValidator,
+  storageSeed: ResourceStorageSeed,
+  rulesSeed: ClaimLedgerRulesSeed,
+): ProofResult {
   const slot = join(dir, "crash.save.json");
-  const v1 = createEmptySaveBlob({ game_version: PROOF_GAME_VERSION, last_saved_utc: PROOF_UTC_V1 });
-  const v2 = createEmptySaveBlob({ game_version: PROOF_GAME_VERSION, last_saved_utc: PROOF_UTC_V2 });
+  const worldClock: WorldClock = { day_index: 0, time_of_day: 0 };
+  const rewardState = buildRewardBearingState(storageSeed, rulesSeed, worldClock);
+  const v1: SaveBlob = {
+    ...createEmptySaveBlob({ game_version: PROOF_GAME_VERSION, last_saved_utc: PROOF_UTC_V1 }),
+    resources: toResourceBands(rewardState.harbor),
+    claim_ledger: rewardState.ledger,
+    pending_reward_resolution: [...rewardState.pending],
+  };
+  const v2: SaveBlob = { ...v1, meta: { ...v1.meta, last_saved_utc: PROOF_UTC_V2 } };
 
   saveAtomically(slot, v1, { validate });
   const v1Bytes = readFileSync(slot, "utf8");
@@ -231,10 +384,10 @@ export function proveCrashDuringWriteSurvival(dir: string, validate: SaveBlobVal
   return {
     pass: true,
     detail:
-      `M0 empty-shell scope (Sim §7 M0 exit): prior good save (${Buffer.byteLength(v1Bytes)} bytes) survived ` +
-      `byte-identical and loadable through 4 simulated crash points (torn temp write · pre-fsync · pre-rollback · ` +
-      `pre-rename) plus a schema-validation abort; the next successful save committed atomically and preserved the ` +
-      `prior save as rollback. No partial write ever became the current save. Reward-duplication half of S7 ` +
-      `remains FUTURE BUILD until rewards exist.`,
+      `A2 reward-bearing scope: prior good save (${Buffer.byteLength(v1Bytes)} bytes — Claim Ledger packages incl. ` +
+      `a partial-claim held remainder, a Story Claim, and a persistent pending record) survived byte-identical and ` +
+      `loadable through 4 simulated crash points (torn temp write · pre-fsync · pre-rollback · pre-rename) plus a ` +
+      `schema-validation abort; the next successful save committed atomically and preserved the prior save as ` +
+      `rollback. No partial write ever became the current save; no crash duplicated or lost a reward.`,
   };
 }

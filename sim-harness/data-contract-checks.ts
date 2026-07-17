@@ -29,6 +29,7 @@ const SIM_CORE_DIR = "src/sim";
 const SEED_SETS: ReadonlyArray<{ dir: string; payloadRoot: string }> = [
   { dir: "data/guardians", payloadRoot: "kit" },
   { dir: "data/economy", payloadRoot: "storage" },
+  { dir: "data/rewards", payloadRoot: "rules" },
 ];
 
 const fail = (evidence: string): CheckVerdict => ({ pass: false, evidence });

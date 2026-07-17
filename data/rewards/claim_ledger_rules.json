@@ -1,0 +1,25 @@
+{
+  "schema_version": "0.1.0",
+  "rules": {
+    "max_unclaimed_packages_per_resource": 5,
+    "max_global_active_packages": 20
+  },
+  "value_metadata": [
+    {
+      "id": "rewards.claim_ledger.max_unclaimed_packages_per_resource",
+      "path": "rules.max_unclaimed_packages_per_resource",
+      "unit": "flat",
+      "gate": "v1",
+      "source_doc_section": "04_REWARD_CLAIM_LEDGER_FOUNDATION v0.4 §5 (max 5 unclaimed packages per resource type; a package consumes one slot per contained resource); 01_ECONOMY_FOUNDATION v1.7 §10",
+      "invariant_refs": ["DC1", "DC4", "L7", "L11"]
+    },
+    {
+      "id": "rewards.claim_ledger.max_global_active_packages",
+      "path": "rules.max_global_active_packages",
+      "unit": "flat",
+      "gate": "v1",
+      "source_doc_section": "04_REWARD_CLAIM_LEDGER_FOUNDATION v0.4 §5 (20 global active non-story packages; Story Claims never count); 01_ECONOMY_FOUNDATION v1.7 §10",
+      "invariant_refs": ["DC1", "DC4", "L7", "L11"]
+    }
+  ]
+}

@@ -5,8 +5,9 @@
  * every Safe/Exposed band (real start stocks come from /data
  * resource_definition seeds at Alpha — DC1), World Clock at day 0, threat at
  * its "calm" zero-state (Doc 05 phase order), and every content-bearing block
- * schema-enforced empty. No gameplay numbers: zeros/empties are identity
- * state, not tuned values.
+ * empty (blocks whose feature is FUTURE BUILD remain schema-enforced empty;
+ * the A2 claim_ledger/pending blocks are simply at their empty identity).
+ * No gameplay numbers: zeros/empties are identity state, not tuned values.
  *
  * Governing docs: SAVE_LOAD_TIME_RECONCILIATION_SPEC v0.5 §16; M0 packet §8
  * ("save/load skeleton round-trips an empty/minimal state").
@@ -41,7 +42,7 @@ export function createEmptySaveBlob(args: EmptySaveArgs): SaveBlob {
     buildings: [],
     workers: [],
     threat: { phase: "calm" },
-    claim_ledger: { packages: [] },
+    claim_ledger: { packages: [], story_claims: [] },
     pending_reward_resolution: [],
     system_messages: [],
     merit: {},

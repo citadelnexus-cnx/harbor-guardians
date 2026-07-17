@@ -1,0 +1,99 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$ref": "#/definitions/ClaimLedgerRulesSeed",
+  "definitions": {
+    "ClaimLedgerRulesSeed": {
+      "type": "object",
+      "properties": {
+        "schema_version": {
+          "type": "string"
+        },
+        "rules": {
+          "$ref": "#/definitions/ClaimLedgerRules"
+        },
+        "value_metadata": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/SeedValueMetadata"
+          }
+        }
+      },
+      "required": [
+        "schema_version",
+        "rules",
+        "value_metadata"
+      ],
+      "additionalProperties": false,
+      "description": "A /data/rewards claim-ledger rules seed file: versioned envelope (DC5) plus DC4 value metadata for every numeric leaf under `rules`."
+    },
+    "ClaimLedgerRules": {
+      "type": "object",
+      "properties": {
+        "max_unclaimed_packages_per_resource": {
+          "type": "number",
+          "description": "Max unclaimed non-story packages holding a given CoreResource (Doc 04 §5: \"5 unclaimed packages per resource type\")."
+        },
+        "max_global_active_packages": {
+          "type": "number",
+          "description": "Max global active non-story packages (Doc 04 §5: \"20 global active non-story packages\")."
+        }
+      },
+      "required": [
+        "max_unclaimed_packages_per_resource",
+        "max_global_active_packages"
+      ],
+      "additionalProperties": false,
+      "description": "The Doc 04 §5 slot-accounting caps (v1 values; sim-tuned only via this seed)."
+    },
+    "SeedValueMetadata": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "path": {
+          "type": "string"
+        },
+        "unit": {
+          "$ref": "#/definitions/Unit"
+        },
+        "gate": {
+          "type": "string"
+        },
+        "source_doc_section": {
+          "type": "string"
+        },
+        "invariant_refs": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "required": [
+        "id",
+        "path",
+        "unit",
+        "gate",
+        "source_doc_section",
+        "invariant_refs"
+      ],
+      "additionalProperties": false,
+      "description": "DC4 unit-requirement metadata for one numeric seed value. `path` is the dot-path of the numeric field under the seed's payload root (`kit` for guardian seeds, `storage` for resource-storage seeds); the validator enforces that every numeric leaf has exactly one entry and every entry resolves to a numeric leaf."
+    },
+    "Unit": {
+      "type": "string",
+      "enum": [
+        "per_pulse",
+        "per_minute",
+        "per_world_day",
+        "per_run",
+        "per_quest",
+        "flat"
+      ],
+      "description": "Value-cadence vocabulary for seed metadata (Doc 07 §2 / §1.2, DC4)."
+    }
+  },
+  "$id": "hg.claim_ledger_rules_seed",
+  "$comment": "GENERATED from src/contracts/claim-ledger-rules.ts (D39) — do not edit by hand; run `pnpm run schema:generate`."
+}

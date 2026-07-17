@@ -1,0 +1,42 @@
+{
+  "buildings": [],
+  "claim_ledger": {
+    "packages": []
+  },
+  "flags_story": {},
+  "guardian_bond": null,
+  "merit": {},
+  "meta": {
+    "game_version": "0.0.0",
+    "last_saved_utc": "2026-01-01T00:00:00.000Z",
+    "save_schema_version": 1
+  },
+  "pending_reward_resolution": [],
+  "resources": {
+    "Aether": {
+      "exposed": 400,
+      "safe": 200
+    },
+    "Crowns": {
+      "exposed": 1000,
+      "safe": 500
+    },
+    "Iron": {
+      "exposed": 600,
+      "safe": 300
+    },
+    "Provisions": {
+      "exposed": 600,
+      "safe": 300
+    }
+  },
+  "system_messages": [],
+  "threat": {
+    "phase": "calm"
+  },
+  "workers": [],
+  "world_clock": {
+    "day_index": 0,
+    "time_of_day": 0
+  }
+}
