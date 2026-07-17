@@ -41,9 +41,9 @@ Escalation = stop work, state the gap and the decision it blocks, and wait. Do n
 
 ## 7. Scope discipline
 
-Milestone N+1 does not begin until milestone N is stable and **tested**. Milestone 0 is **closed** (see `M0_EXIT_EVIDENCE.md`). Current scope: **Alpha A0 only** — planning and harness preparation, per a private owner authorization dated 2026-07-15; the A0 boundary is recorded in `docs/alpha/ALPHA_A0_EXECUTION_BRIEF_v0.1.md`. **Alpha A1 is not authorized. Gameplay implementation is not authorized.** No event logic, no UI gameplay, no deployment. Any scope beyond A0 requires a separate owner approval.
+Milestone N+1 does not begin until milestone N is stable and **tested**. Milestone 0 is **closed** (see `M0_EXIT_EVIDENCE.md`); Alpha A0 is **closed** (EVT stubs registered fail-loud, registry 132). Current scope: **Alpha A1 only** — Minimal Harbor State and Resource Spine (deterministic harbor/resource state, schema-backed CoreResource storage, selected honest invariant conversion, save/load compatibility only as needed), per an owner authorization dated 2026-07-16; the A1 boundary is recorded in `docs/alpha/ALPHA_A1_EXECUTION_BRIEF_v0.1.md`. **Alpha A2 is not authorized. No gameplay loop, no events, no expeditions, no combat, no raids, no guardians, no gameplay UI, no deployment, no production work.** Any scope beyond A1 requires a separate owner approval.
 
-This scope section is amended only by a new owner authorization record (held privately outside this public repo, like the M0 and A0 records). If you believe scope has expanded, verify with the owner against the latest authorization record before acting — never assume.
+This scope section is amended only by a new owner authorization record (held privately outside this public repo, like the M0, A0, and A1 records). If you believe scope has expanded, verify with the owner against the latest authorization record before acting — never assume.
 
 ## 8. Traceability
 

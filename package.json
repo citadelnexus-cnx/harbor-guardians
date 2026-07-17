@@ -15,6 +15,7 @@
     "schema:validate": "node scripts/validate-data.mjs",
     "sim:harness": "tsx sim-harness/run.ts",
     "test:save": "tsx --test tests/save-load.test.ts",
+    "test:harbor": "tsx --test tests/harbor-state.test.ts",
     "tauri": "tauri"
   },
   "devDependencies": {

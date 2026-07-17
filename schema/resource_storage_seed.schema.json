@@ -1,0 +1,131 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$ref": "#/definitions/ResourceStorageSeed",
+  "definitions": {
+    "ResourceStorageSeed": {
+      "type": "object",
+      "properties": {
+        "schema_version": {
+          "type": "string"
+        },
+        "storage": {
+          "type": "object",
+          "properties": {
+            "Crowns": {
+              "$ref": "#/definitions/ResourceStorageDefinition"
+            },
+            "Provisions": {
+              "$ref": "#/definitions/ResourceStorageDefinition"
+            },
+            "Iron": {
+              "$ref": "#/definitions/ResourceStorageDefinition"
+            },
+            "Aether": {
+              "$ref": "#/definitions/ResourceStorageDefinition"
+            }
+          },
+          "required": [
+            "Crowns",
+            "Provisions",
+            "Iron",
+            "Aether"
+          ],
+          "additionalProperties": false,
+          "description": "Exactly the four CoreResources; the generated schema rejects any other key (DC6)."
+        },
+        "value_metadata": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/SeedValueMetadata"
+          }
+        }
+      },
+      "required": [
+        "schema_version",
+        "storage",
+        "value_metadata"
+      ],
+      "additionalProperties": false,
+      "description": "A /data/economy resource-storage seed file: versioned envelope (DC5) keyed by CoreResource ONLY (DC6) plus DC4 value metadata for every numeric leaf under `storage`."
+    },
+    "ResourceStorageDefinition": {
+      "type": "object",
+      "properties": {
+        "start_stock": {
+          "type": "number",
+          "description": "Owner-approved starting stock (Economy §3); placed in Safe storage at world creation."
+        },
+        "safe_capacity_st1": {
+          "type": "number",
+          "description": "Safe storage capacity S at ST1 (Economy §7)."
+        },
+        "exposed_capacity_st1": {
+          "type": "number",
+          "description": "Exposed surplus capacity 2S at ST1 (D1)."
+        },
+        "total_capacity_st1": {
+          "type": "number",
+          "description": "Total hard-stop capacity 3S at ST1 (D1)."
+        }
+      },
+      "required": [
+        "start_stock",
+        "safe_capacity_st1",
+        "exposed_capacity_st1",
+        "total_capacity_st1"
+      ],
+      "additionalProperties": false,
+      "description": "One CoreResource's storage definition at ST1 (Economy §7 row + §3 start stock). All three capacities are seeded explicitly — the D1 relationship (exposed = 2×S, total = 3×S) is cross-checked by the seed validator, never derived in sim code (No Magic Numbers: the multipliers are doctrine values, not code constants)."
+    },
+    "SeedValueMetadata": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "path": {
+          "type": "string"
+        },
+        "unit": {
+          "$ref": "#/definitions/Unit"
+        },
+        "gate": {
+          "type": "string"
+        },
+        "source_doc_section": {
+          "type": "string"
+        },
+        "invariant_refs": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "required": [
+        "id",
+        "path",
+        "unit",
+        "gate",
+        "source_doc_section",
+        "invariant_refs"
+      ],
+      "additionalProperties": false,
+      "description": "DC4 unit-requirement metadata for one numeric seed value. `path` is the dot-path of the numeric field under the seed's payload root (`kit` for guardian seeds, `storage` for resource-storage seeds); the validator enforces that every numeric leaf has exactly one entry and every entry resolves to a numeric leaf."
+    },
+    "Unit": {
+      "type": "string",
+      "enum": [
+        "per_pulse",
+        "per_minute",
+        "per_world_day",
+        "per_run",
+        "per_quest",
+        "flat"
+      ],
+      "description": "Value-cadence vocabulary for seed metadata (Doc 07 §2 / §1.2, DC4)."
+    }
+  },
+  "$id": "hg.resource_storage_seed",
+  "$comment": "GENERATED from src/contracts/resource-storage.ts (D39) — do not edit by hand; run `pnpm run schema:generate`."
+}

@@ -1,8 +1,9 @@
 /**
- * Headless sim-harness runner (CLI) — M0 skeleton + Alpha A0 EVT registration.
+ * Headless sim-harness runner (CLI) — M0 skeleton + A0 EVT registration +
+ * A1 data-contract/harbor-spine checks (owner A1 authorization 2026-07-16).
  *
- * What it does at M0/A0 (no gameplay, no sim-core logic — M0 packet §1/§8;
- * A0 authorizes harness prep only):
+ * What it does at A1 (no gameplay LOOP — A1 authorizes the deterministic
+ * harbor/resource state spine only; M0 packet §1/§8 doctrine still applies):
  *   1. Registry integrity: every required invariant ID (E/L/M/C/S/OPS/CARGO/
  *      TD/A11Y/DC/OB/GEAR/W/FCT/GDN/EVT/UX1) is registered exactly once.
  *   2. Seed-validation gate: the harness consumes only schema-validated
@@ -26,9 +27,10 @@
  * Governing docs: SIM_HARNESS_ACCEPTANCE_SPEC v0.6.2 §2/§3/§5/§7/§8;
  * M0 packet §8; CLAUDE.md §3 (claim-to-test).
  * Invariant refs: registers all suites (incl. EVT1–EVT10, added at Alpha A0
- * per 15_EVENT_SYSTEM_SPEC v0.2 §5 — stubs only, no event logic); S5/S7
- * implemented at M0 Step 7 (empty-shell scope, Sim §7 M0 exit gate); all
- * other IDs are stubs.
+ * per 15_EVENT_SYSTEM_SPEC v0.2 §5 — stubs only, no event logic).
+ * Implemented: S5/S7 (M0 Step 7, S5 extended at A1 with the stocked
+ * seeded-storage round-trip) + DC1/DC4/DC5/DC6 (Alpha A1); all other IDs
+ * are fail-loud stubs.
  */
 
 import { spawnSync } from "node:child_process";
@@ -126,7 +128,7 @@ const problem = (msg: string) => {
   console.error(`FAIL  ${msg}`);
 };
 
-console.log(`sim-harness A0 batch — seed ${seed}\n`);
+console.log(`sim-harness A1 batch — seed ${seed}\n`);
 
 // 1. Registry integrity
 const integrityProblems = verifyRegistryIntegrity();
@@ -140,7 +142,7 @@ if (integrityProblems.length > 0) {
 const gate = spawnSync(process.execPath, ["scripts/validate-data.mjs"], { encoding: "utf8" });
 const gatePass = gate.status === 0;
 const gateDetail = gatePass
-  ? "scripts/validate-data.mjs exit 0 — /data/guardians seeds schema-valid (DC4/DC5 checks green)"
+  ? "scripts/validate-data.mjs exit 0 — all /data seed sets schema-valid (DC4/DC5/D1 checks green)"
   : `scripts/validate-data.mjs exit ${gate.status} — invalid seeds; harness refuses to run on unvalidated data (Sim §2)`;
 if (gatePass) {
   console.log(`ok    seed-validation gate: ${gateDetail}`);
@@ -231,10 +233,11 @@ const personaIds = personas.map((p) =>
 );
 const personasWithBehavior = personas.filter((p) => p.run !== undefined);
 if (personasWithBehavior.length > 0) {
-  // At M0/A0 no persona may claim a behavior model (scope guard, CLAUDE.md §7;
-  // Alpha A0 authorizes planning + harness prep only, no gameplay).
+  // Through A1 no persona may claim a behavior model (scope guard, CLAUDE.md
+  // §7; A1 authorizes the harbor/resource state spine only — no gameplay
+  // loop, so behavior models remain unauthorized).
   problem(
-    `persona matrix: ${personasWithBehavior.map((p) => p.id).join(", ")} declare behavior models — not authorized at M0/A0`,
+    `persona matrix: ${personasWithBehavior.map((p) => p.id).join(", ")} declare behavior models — not authorized at M0/A0/A1`,
   );
 } else {
   console.log(`ok    persona matrix declared (hooks only, no behavior models): ${personaIds.join(" · ")}`);
@@ -250,7 +253,7 @@ const registryCounts = Object.fromEntries(
 
 const report: HarnessReport = {
   harness: "harbor-guardians sim-harness",
-  milestone: "A0",
+  milestone: "A1",
   seed,
   registry_counts: registryCounts,
   total_invariants: INVARIANT_REGISTRY.length,
@@ -269,7 +272,7 @@ const implementedIds = batch.invariant_results.filter((r) => r.outcome === "PASS
 const stubTotal = batch.invariant_results.filter((r) => r.outcome === "STUB_FAIL_LOUD_VERIFIED").length;
 console.log(
   batchGreen
-    ? `\nA0 BATCH GREEN — ${INVARIANT_REGISTRY.length} invariants registered: ${stubTotal} fail-loud stubs (no unimplemented invariant is claimed as passing) + ${implementedIds.length} implemented and proven green (${implementedIds.join(", ") || "none"}); seed gate + determinism proof passed (seed ${seed}).`
-    : `\nA0 BATCH RED — see failures above (seed ${seed}).`,
+    ? `\nA1 BATCH GREEN — ${INVARIANT_REGISTRY.length} invariants registered: ${stubTotal} fail-loud stubs (no unimplemented invariant is claimed as passing) + ${implementedIds.length} implemented and proven green (${implementedIds.join(", ") || "none"}); seed gate + determinism proof passed (seed ${seed}).`
+    : `\nA1 BATCH RED — see failures above (seed ${seed}).`,
 );
 process.exit(batchGreen ? 0 : 1);

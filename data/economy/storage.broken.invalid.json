@@ -1,0 +1,36 @@
+{
+  "schema_version": 999,
+  "storage": {
+    "Crowns": {
+      "start_stock": 200,
+      "safe_capacity_st1": "five hundred",
+      "exposed_capacity_st1": 1000,
+      "total_capacity_st1": 1500
+    },
+    "Provisions": {
+      "start_stock": 150,
+      "safe_capacity_st1": 300,
+      "exposed_capacity_st1": 600,
+      "total_capacity_st1": 900
+    },
+    "Iron": {
+      "start_stock": 100,
+      "safe_capacity_st1": 300,
+      "exposed_capacity_st1": 600,
+      "total_capacity_st1": 900
+    },
+    "Merit": {
+      "start_stock": 0,
+      "safe_capacity_st1": 100,
+      "exposed_capacity_st1": 200,
+      "total_capacity_st1": 300
+    },
+    "BondCharge": {
+      "start_stock": 0,
+      "safe_capacity_st1": 1,
+      "exposed_capacity_st1": 2,
+      "total_capacity_st1": 3
+    }
+  },
+  "value_metadata": []
+}

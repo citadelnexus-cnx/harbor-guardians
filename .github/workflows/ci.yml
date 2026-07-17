@@ -54,8 +54,11 @@ jobs:
       - name: Sim-harness smoke (headless, fixed seeds)
         run: pnpm run sim:harness
 
-      - name: Save/load tests (S7 atomic save + empty-state round-trip)
+      - name: Save/load tests (S7 atomic save + empty-state + A1 stocked-state round-trip)
         run: pnpm run test:save
+
+      - name: Harbor-state tests (A1 resource spine — 3S separation, hard stop, no hidden loss, DC6)
+        run: pnpm run test:harbor
 
       - name: Rust toolchain versions (runner-preinstalled stable/MSVC)
         run: |

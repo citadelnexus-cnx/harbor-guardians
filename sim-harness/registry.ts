@@ -6,7 +6,14 @@
  *
  * Implemented at M0 Step 7 (save/load skeleton): S5 + S7, at empty-shell
  * scope per the Sim §7 M0 exit gate ("S5/S7 pass on the empty shell");
- * proofs in src/save/proofs.ts. Everything else remains a fail-loud stub.
+ * proofs in src/save/proofs.ts.
+ * Implemented at Alpha A1 (owner A1 authorization 2026-07-16 — Minimal
+ * Harbor State and Resource Spine): DC1, DC4, DC5, DC6 (checks in
+ * data-contract-checks.ts), and S5 extended with the stocked seeded-storage
+ * round-trip. Everything else remains a fail-loud stub — every E/L/M/C/
+ * CARGO/OPS/TD/… invariant binds to a system that does not exist at A1
+ * (production, offline, raids, ledger, cargo, events), and converting any
+ * of them would claim untested capability.
  *
  * Governing docs (statements condensed from, and audited against):
  *   - SIM_HARNESS_ACCEPTANCE_SPEC v0.6.2 §4.1–§4.8 (E, L, M, C, CARGO, S, OPS, UX1)
@@ -28,8 +35,20 @@
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { proveCrashDuringWriteSurvival, proveEmptyStateRoundTrip, type ProofResult } from "../src/save/proofs.js";
+import {
+  proveCrashDuringWriteSurvival,
+  proveEmptyStateRoundTrip,
+  proveStockedStateRoundTrip,
+  type ProofResult,
+} from "../src/save/proofs.js";
 import { createSaveBlobValidator, type SaveBlobValidator } from "../src/save/save-blob-validator.js";
+import {
+  checkDc1NoMagicNumbers,
+  checkDc4SeedMetadata,
+  checkDc5ValidationGate,
+  checkDc6CoreResourceOnly,
+} from "./data-contract-checks.js";
+import { loadStorageSeed } from "./storage-seed.js";
 import { InvariantStubError, type CheckVerdict, type InvariantEntry, type Suite } from "./types.js";
 
 const SIM = "SIM_HARNESS_ACCEPTANCE_SPEC v0.6.2";
@@ -177,8 +196,14 @@ export const INVARIANT_REGISTRY: readonly InvariantEntry[] = [
     "S5",
     "S",
     "Save/load round-trip preserves world clock, storage states (incl. Crowns), threat phase, queues, Claim Ledger (incl. Story Claims, partial remainders, pending_reward_resolution), System Inbox, and combat suspend snapshot if present.",
-    `${SIM} §4.6 + SAVE_LOAD_TIME_RECONCILIATION_SPEC v0.5 §16 (M0 Step 7: empty-shell scope per Sim §7 M0 exit)`,
-    () => runSaveProof(proveEmptyStateRoundTrip),
+    `${SIM} §4.6 + SAVE_LOAD_TIME_RECONCILIATION_SPEC v0.5 §16 (M0: empty shell; A1: + stocked seeded 3S storage bands)`,
+    () => {
+      const empty = runSaveProof(proveEmptyStateRoundTrip);
+      if (!empty.pass) return empty;
+      const stocked = runSaveProof((dir, validate) => proveStockedStateRoundTrip(dir, validate, loadStorageSeed()));
+      if (!stocked.pass) return stocked;
+      return { pass: true, evidence: `[empty shell] ${empty.evidence} [A1 stocked state] ${stocked.evidence}` };
+    },
   ),
   stub("S6", "S", "Production build-flag guard: system-grant code paths are compiled out/disabled in production except approved migration/recovery paths; no dev/debug grant path is reachable.", `${SIM} §4.6`),
   implemented(
@@ -196,12 +221,40 @@ export const INVARIANT_REGISTRY: readonly InvariantEntry[] = [
   stub("UX1", "UX", "The System Inbox never transfers resources directly; message actions are Read / Acknowledge / Archive / View Reward Package; only Claim Ledger packages expose Claim; no inbox action mutates a resource total.", `${SIM} §4.8`),
 
   // ── Data contracts (DC1–DC6) — Doc 07 v0.1.2 §7 ───────────────────────────
-  stub("DC1", "DC", "Every gameplay number resolves to a schema-validated seed field (No Magic Numbers).", "07_CONTENT_SCHEMA_AND_DATA_CONTRACTS_SPEC v0.1.2 §7"),
+  // DC1/DC4/DC5/DC6 converted stub → implemented at Alpha A1 (owner A1
+  // authorization 2026-07-16); checks in data-contract-checks.ts. DC2/DC3
+  // stay fail-loud: combat reward lines and message↔package links do not
+  // exist, and converting them would claim untested capability (CLAUDE.md §3).
+  implemented(
+    "DC1",
+    "DC",
+    "Every gameplay number resolves to a schema-validated seed field (No Magic Numbers).",
+    "07_CONTENT_SCHEMA_AND_DATA_CONTRACTS_SPEC v0.1.2 §7 (A1 scope: sim-core literal scan + harbor spine seed binding)",
+    () => checkDc1NoMagicNumbers(),
+  ),
   stub("DC2", "DC", "Every combat_reward_line declares exactly one RewardRoute (mirrors CARGO2).", "07_CONTENT_SCHEMA_AND_DATA_CONTRACTS_SPEC v0.1.2 §7"),
   stub("DC3", "DC", "Referential integrity holds for message↔package↔pending links.", "07_CONTENT_SCHEMA_AND_DATA_CONTRACTS_SPEC v0.1.2 §7"),
-  stub("DC4", "DC", "Every seed value carries the full unit-requirement metadata (id · unit · gate · source-section · invariant-refs).", "07_CONTENT_SCHEMA_AND_DATA_CONTRACTS_SPEC v0.1.2 §7"),
-  stub("DC5", "DC", "An unversioned or invalid schema blocks CI.", "07_CONTENT_SCHEMA_AND_DATA_CONTRACTS_SPEC v0.1.2 §7"),
-  stub("DC6", "DC", "storage_state, exposed-surplus, cargo, and raid-loss fields type against CoreResource only; a schema admitting Merit or receipt metrics into those fields fails validation.", "07_CONTENT_SCHEMA_AND_DATA_CONTRACTS_SPEC v0.1.2 §7"),
+  implemented(
+    "DC4",
+    "DC",
+    "Every seed value carries the full unit-requirement metadata (id · unit · gate · source-section · invariant-refs).",
+    "07_CONTENT_SCHEMA_AND_DATA_CONTRACTS_SPEC v0.1.2 §7 (A1: enforced across all committed seed sets)",
+    () => checkDc4SeedMetadata(),
+  ),
+  implemented(
+    "DC5",
+    "DC",
+    "An unversioned or invalid schema blocks CI.",
+    "07_CONTENT_SCHEMA_AND_DATA_CONTRACTS_SPEC v0.1.2 §7 (A1: executes the CI gate + drift guard + negative fixtures)",
+    () => checkDc5ValidationGate(),
+  ),
+  implemented(
+    "DC6",
+    "DC",
+    "storage_state, exposed-surplus, cargo, and raid-loss fields type against CoreResource only; a schema admitting Merit or receipt metrics into those fields fails validation.",
+    "07_CONTENT_SCHEMA_AND_DATA_CONTRACTS_SPEC v0.1.2 §7 (A1 scope: storage/exposure fields; cargo/raid-loss are FUTURE BUILD)",
+    () => checkDc6CoreResourceOnly(),
+  ),
 
   // ── Threat director (TD1–TD4) — Doc 05 v0.1.3 §11 ─────────────────────────
   stub("TD1", "TD", "Threat advance is deterministic under a seed.", "05_THREAT_AND_RAID_DIRECTOR_FOUNDATION v0.1.3 §11"),

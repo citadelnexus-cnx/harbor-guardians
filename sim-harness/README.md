@@ -1,4 +1,4 @@
-# /sim-harness — claim-to-test QA spine (M0 skeleton + Alpha A0 EVT registration)
+# /sim-harness — claim-to-test QA spine (M0 skeleton + A0 EVT registration + A1 data-contract checks)
 
 **One responsibility:** the headless CLI runner over the pure sim core (`/src/sim`) —
 persona matrix plus the claim-to-test invariant suites. QA per [`AGENTS.md`](../AGENTS.md):
@@ -8,9 +8,9 @@ Governing docs: [`SIM_HARNESS_ACCEPTANCE_SPEC v0.6.2`](../docs/foundation/SIM_HA
 (architecture §2, persona matrix §3, suites §4, report §5, gates §7, evidence §8);
 M0 packet §8; [`CLAUDE.md`](../CLAUDE.md) §3 (claim-to-test).
 
-## M0/A0 state — registry + fail-loud stubs only
+## A1 state — registry + fail-loud stubs + first honest conversions
 
-**No gameplay or sim-core logic exists here.** What exists:
+**No gameplay loop exists.** What exists:
 
 - **Invariant registry** ([`registry.ts`](registry.ts)) — all 132 required IDs
   registered and addressable:
@@ -24,11 +24,18 @@ M0 packet §8; [`CLAUDE.md`](../CLAUDE.md) §3 (claim-to-test).
   [`docs/alpha/`](../docs/alpha/README.md)).
   **Implemented (M0 Step 7):** S5 + S7 at empty-shell scope (Sim §7 M0 exit
   gate), backed by the save/load proofs in
-  [`src/save/proofs.ts`](../src/save/proofs.ts). Every other ID is a
-  fail-loud stub: executing it **throws** (`InvariantStubError`) — "claimed
-  but untested" is impossible. A feature PR turns its stub(s) green by
-  replacing the check body, flipping `status` to `"implemented"`, and
-  attaching evidence.
+  [`src/save/proofs.ts`](../src/save/proofs.ts).
+  **Implemented (Alpha A1, owner authorization 2026-07-16):** DC1, DC4, DC5,
+  DC6 ([`data-contract-checks.ts`](data-contract-checks.ts)) at A1 scope —
+  No-Magic-Numbers scan + harbor-spine seed binding, DC4 metadata across all
+  seed sets, the CI validation gate + drift guard + negative fixtures, and
+  CoreResource-only storage typing probes; S5 extended with the stocked
+  seeded-storage round-trip (3S bands from
+  [`data/economy/storage.st1.json`](../data/economy/storage.st1.json)).
+  Every other ID is a fail-loud stub: executing it **throws**
+  (`InvariantStubError`) — "claimed but untested" is impossible. A feature PR
+  turns its stub(s) green by replacing the check body, flipping `status` to
+  `"implemented"`, and attaching evidence.
 - **Fail-loud runner** ([`run.ts`](run.ts)) — verifies registry completeness,
   gates on schema-validated seeds (invokes `scripts/validate-data.mjs`, Sim §2),
   verifies every stub throws, proves fixed-seed repeat-run determinism, and
@@ -50,10 +57,11 @@ pnpm run sim:harness -- --list          # print the registry
 pnpm run sim:harness -- --invariant E2  # execute one invariant for real
 ```
 
-At M0/A0, `--invariant <ID>` **exits 1 for every stub ID** — that is the point:
-an invariant stays a fail-loud stub until its feature is implemented and
-proven (S5/S7 exit 0 since Step 7). The batch records stubs as
-`STUB_FAIL_LOUD_VERIFIED`, never `PASS`.
+`--invariant <ID>` **exits 1 for every stub ID** — that is the point: an
+invariant stays a fail-loud stub until its feature is implemented and proven
+(S5/S7 exit 0 since M0 Step 7; DC1/DC4/DC5/DC6 exit 0 since Alpha A1). The
+batch records stubs as `STUB_FAIL_LOUD_VERIFIED`, never `PASS` — at A1 that
+is 126 stubs + 6 implemented.
 
 Batch reports are written to `sim-harness/reports/` (gitignored); they are
 evidence artifacts attached to PRs per Sim §8, not committed state.

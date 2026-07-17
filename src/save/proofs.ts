@@ -1,8 +1,11 @@
 /**
  * Save/load proofs — the executable evidence behind S5 (round-trip) and S7
- * (atomic save integrity) at M0 empty-shell scope. One implementation, two
- * consumers: `tests/save-load.test.ts` and the sim-harness registry checks
- * (claim-to-test, CLAUDE.md §3 — the harness is the arbiter of "done").
+ * (atomic save integrity). S5 runs at two scopes: the M0 empty-shell
+ * round-trip and, since Alpha A1, the stocked harbor-state round-trip
+ * (seeded 3S storage bands incl. Crowns — owner A1 authorization,
+ * 2026-07-16). One implementation, two consumers: `tests/save-load.test.ts`
+ * and the sim-harness registry checks (claim-to-test, CLAUDE.md §3 — the
+ * harness is the arbiter of "done").
  *
  * Detail strings are deterministic (no paths, no wall-clock) so the harness
  * repeat-run determinism proof holds over them.
@@ -15,7 +18,9 @@
 
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
+import type { ResourceStorageSeed } from "../contracts/resource-storage.js";
 import type { SaveBlob } from "../contracts/save-blob.js";
+import { CORE_RESOURCES, createHarborState, deposit, fromResourceBands, toResourceBands } from "../sim/harbor-state.js";
 import { canonicalSerialize } from "./canonical-json.js";
 import { loadSave, rollbackPath, saveAtomically, tempPath, type CrashSimulationHooks } from "./atomic-save.js";
 import { createEmptySaveBlob } from "./empty-save.js";
@@ -84,6 +89,76 @@ export function proveEmptyStateRoundTrip(dir: string, validate: SaveBlobValidato
       `M0 empty-shell scope (Sim §7 M0 exit): empty/minimal save blob (all Save/Load §16 blocks at identity state) ` +
       `save→load→re-serialize byte-identical (${saved.bytes} bytes); re-save byte-stable with prior save preserved ` +
       `as rollback. Content-bearing state preservation remains FUTURE BUILD per feature.`,
+  };
+}
+
+/**
+ * S5 @ A1: the STOCKED harbor state round-trips byte-identically. Builds the
+ * world-creation state from the schema-validated storage seed (Economy §3
+ * start stocks), deposits each resource's seeded total capacity so every
+ * resource sits at the 3S hard stop with a non-zero Exposed band (all
+ * amounts are seed values — No Magic Numbers), saves, loads, and requires
+ * byte identity plus exact stock preservation through fromResourceBands.
+ * This is the A1 extension of S5's "storage states (safe/exposed incl.
+ * Crowns)" clause; all other §16 blocks remain at identity state (their
+ * features are FUTURE BUILD).
+ */
+export function proveStockedStateRoundTrip(
+  dir: string,
+  validate: SaveBlobValidator,
+  storageSeed: ResourceStorageSeed,
+): ProofResult {
+  const slot = join(dir, "stocked-roundtrip.save.json");
+
+  // World-creation state, then fill every resource to its 3S hard stop so the
+  // round-trip covers a non-trivial safe AND exposed band per resource.
+  let harbor = createHarborState(storageSeed);
+  for (const resource of CORE_RESOURCES) {
+    const result = deposit(harbor, resource, storageSeed.storage[resource].total_capacity_st1);
+    harbor = result.state;
+    const conserved =
+      result.deposited_to_safe + result.deposited_to_exposed + result.blocked_at_cap ===
+      storageSeed.storage[resource].total_capacity_st1;
+    if (!conserved) {
+      return failed(`S5 stocked round-trip: deposit conservation violated for ${resource} — hidden loss`);
+    }
+    if (harbor.resources[resource].exposed <= 0) {
+      return failed(`S5 stocked round-trip: ${resource} exposed band not exercised — proof would be vacuous`);
+    }
+  }
+
+  const blob: SaveBlob = {
+    ...createEmptySaveBlob({ game_version: PROOF_GAME_VERSION, last_saved_utc: PROOF_UTC_V1 }),
+    resources: toResourceBands(harbor),
+  };
+
+  saveAtomically(slot, blob, { validate });
+  const onDisk = readFileSync(slot, "utf8");
+  const loaded = loadSave(slot, validate);
+  if (canonicalSerialize(loaded) !== onDisk) {
+    return failed("S5 stocked round-trip: save→load→re-serialize NOT byte-identical for the stocked state");
+  }
+
+  // Rebuild the harbor state from the loaded blob + seed; every band must match exactly.
+  const rebuilt = fromResourceBands(loaded.resources, storageSeed);
+  for (const resource of CORE_RESOURCES) {
+    const before = harbor.resources[resource];
+    const after = rebuilt.resources[resource];
+    if (before.safe !== after.safe || before.exposed !== after.exposed) {
+      return failed(
+        `S5 stocked round-trip: ${resource} bands changed across save/load ` +
+          `(safe ${before.safe}→${after.safe}, exposed ${before.exposed}→${after.exposed}) — hidden loss`,
+      );
+    }
+  }
+
+  return {
+    pass: true,
+    detail:
+      `A1 scope: seeded harbor state (start stocks per Economy §3, then filled to the seeded 3S hard stop — ` +
+      `non-zero Safe + Exposed bands for all ${CORE_RESOURCES.length} CoreResources incl. Crowns) ` +
+      `save→load→re-serialize byte-identical; rebuilt state matches every band exactly (no hidden loss). ` +
+      `Deposit conservation held at the cap. Remaining §16 blocks stay at identity state (FUTURE BUILD).`,
   };
 }
 
