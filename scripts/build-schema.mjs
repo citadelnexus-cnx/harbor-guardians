@@ -16,6 +16,9 @@ export const SCHEMA_FILE = "schema/guardian_kit_seed.schema.json";
 export const SAVE_BLOB_SCHEMA_ID = "hg.save_blob";
 export const SAVE_BLOB_SCHEMA_FILE = "schema/save_blob.schema.json";
 
+export const RESOURCE_STORAGE_SCHEMA_ID = "hg.resource_storage_seed";
+export const RESOURCE_STORAGE_SCHEMA_FILE = "schema/resource_storage_seed.schema.json";
+
 function generateFrom(sourcePath, typeName, schemaId) {
   const generator = createGenerator({
     tsconfig: "tsconfig.json",
@@ -40,10 +43,20 @@ export function buildSaveBlobSchema() {
   return generateFrom("src/contracts/save-blob.ts", "SaveBlob", SAVE_BLOB_SCHEMA_ID);
 }
 
+/**
+ * resource_storage_seed schema (Doc 07 §3 storage_state; Economy §7 3S; D26/DC6)
+ * — Alpha A1 harbor/resource spine. `storage` keys are CoreResource-only with
+ * additionalProperties=false, so Merit/receipt-metric keys fail validation (DC6).
+ */
+export function buildResourceStorageSeedSchema() {
+  return generateFrom("src/contracts/resource-storage.ts", "ResourceStorageSeed", RESOURCE_STORAGE_SCHEMA_ID);
+}
+
 /** Every generated schema, one entry per /schema output file (drift-guarded in validate-data.mjs). */
 export const SCHEMA_BUILDS = [
   { file: SCHEMA_FILE, build: buildGuardianKitSeedSchema },
   { file: SAVE_BLOB_SCHEMA_FILE, build: buildSaveBlobSchema },
+  { file: RESOURCE_STORAGE_SCHEMA_FILE, build: buildResourceStorageSeedSchema },
 ];
 
 export function serializeSchema(schema) {

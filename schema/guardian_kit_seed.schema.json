@@ -329,7 +329,7 @@
         "invariant_refs"
       ],
       "additionalProperties": false,
-      "description": "DC4 unit-requirement metadata for one numeric seed value (Doc 07 §1.2, DC4; CLAUDE.md §2 — carried even at skeleton stage). `path` is the dot-path of the numeric field under `kit`; the validator enforces that every numeric leaf has exactly one entry and every entry resolves to a numeric leaf."
+      "description": "DC4 unit-requirement metadata for one numeric seed value. `path` is the dot-path of the numeric field under the seed's payload root (`kit` for guardian seeds, `storage` for resource-storage seeds); the validator enforces that every numeric leaf has exactly one entry and every entry resolves to a numeric leaf."
     },
     "Unit": {
       "type": "string",

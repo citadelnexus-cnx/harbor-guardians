@@ -14,7 +14,8 @@
  * Invariant refs: DC1, DC4, DC5, GDN1, GDN3, GDN4, GDN11.
  */
 
-import type { Chassis, DifficultyTag, LaunchWave, Region, Unit } from "./enums.js";
+import type { Chassis, DifficultyTag, LaunchWave, Region } from "./enums.js";
+import type { SeedValueMetadata } from "./seed-metadata.js";
 
 /**
  * One economy shift, bound to an existing source/sink/event (B4A §4A, GDN11):
@@ -93,21 +94,6 @@ export interface GuardianKit {
   accessibility: AccessibilityBlock;
   sanctum_ref: string;
   provenance: string;
-}
-
-/**
- * DC4 unit-requirement metadata for one numeric seed value (Doc 07 §1.2, DC4;
- * CLAUDE.md §2 — carried even at skeleton stage). `path` is the dot-path of
- * the numeric field under `kit`; the validator enforces that every numeric
- * leaf has exactly one entry and every entry resolves to a numeric leaf.
- */
-export interface SeedValueMetadata {
-  id: string;
-  path: string;
-  unit: Unit;
-  gate: string;
-  source_doc_section: string;
-  invariant_refs: string[];
 }
 
 /**

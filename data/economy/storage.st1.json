@@ -1,0 +1,159 @@
+{
+  "schema_version": "0.1.0",
+  "storage": {
+    "Crowns": {
+      "start_stock": 200,
+      "safe_capacity_st1": 500,
+      "exposed_capacity_st1": 1000,
+      "total_capacity_st1": 1500
+    },
+    "Provisions": {
+      "start_stock": 150,
+      "safe_capacity_st1": 300,
+      "exposed_capacity_st1": 600,
+      "total_capacity_st1": 900
+    },
+    "Iron": {
+      "start_stock": 100,
+      "safe_capacity_st1": 300,
+      "exposed_capacity_st1": 600,
+      "total_capacity_st1": 900
+    },
+    "Aether": {
+      "start_stock": 0,
+      "safe_capacity_st1": 200,
+      "exposed_capacity_st1": 400,
+      "total_capacity_st1": 600
+    }
+  },
+  "value_metadata": [
+    {
+      "id": "eco.storage.crowns.start_stock",
+      "path": "storage.Crowns.start_stock",
+      "unit": "flat",
+      "gate": "world_creation",
+      "source_doc_section": "01_ECONOMY_FOUNDATION v1.7 §3 (owner-approved starting stock)",
+      "invariant_refs": ["DC1", "DC4"]
+    },
+    {
+      "id": "eco.storage.crowns.safe_capacity_st1",
+      "path": "storage.Crowns.safe_capacity_st1",
+      "unit": "flat",
+      "gate": "ST1",
+      "source_doc_section": "01_ECONOMY_FOUNDATION v1.7 §7 (Crowns ST1 S; D1)",
+      "invariant_refs": ["DC1", "DC4", "DC6"]
+    },
+    {
+      "id": "eco.storage.crowns.exposed_capacity_st1",
+      "path": "storage.Crowns.exposed_capacity_st1",
+      "unit": "flat",
+      "gate": "ST1",
+      "source_doc_section": "01_ECONOMY_FOUNDATION v1.7 §7 (Crowns exposed 2S; D1; exposed Crown surplus raidable, no decay — D23)",
+      "invariant_refs": ["DC1", "DC4", "DC6"]
+    },
+    {
+      "id": "eco.storage.crowns.total_capacity_st1",
+      "path": "storage.Crowns.total_capacity_st1",
+      "unit": "flat",
+      "gate": "ST1",
+      "source_doc_section": "01_ECONOMY_FOUNDATION v1.7 §7 (Crowns Total 3S; D1 hard stop)",
+      "invariant_refs": ["DC1", "DC4", "DC6"]
+    },
+    {
+      "id": "eco.storage.provisions.start_stock",
+      "path": "storage.Provisions.start_stock",
+      "unit": "flat",
+      "gate": "world_creation",
+      "source_doc_section": "01_ECONOMY_FOUNDATION v1.7 §3 (owner-approved starting stock)",
+      "invariant_refs": ["DC1", "DC4"]
+    },
+    {
+      "id": "eco.storage.provisions.safe_capacity_st1",
+      "path": "storage.Provisions.safe_capacity_st1",
+      "unit": "flat",
+      "gate": "ST1",
+      "source_doc_section": "01_ECONOMY_FOUNDATION v1.7 §7 (Provisions ST1 S; D1)",
+      "invariant_refs": ["DC1", "DC4", "DC6"]
+    },
+    {
+      "id": "eco.storage.provisions.exposed_capacity_st1",
+      "path": "storage.Provisions.exposed_capacity_st1",
+      "unit": "flat",
+      "gate": "ST1",
+      "source_doc_section": "01_ECONOMY_FOUNDATION v1.7 §7 (Provisions exposed 2S; D1; spoilage behavior is FUTURE BUILD — no pulse sim at A1)",
+      "invariant_refs": ["DC1", "DC4", "DC6"]
+    },
+    {
+      "id": "eco.storage.provisions.total_capacity_st1",
+      "path": "storage.Provisions.total_capacity_st1",
+      "unit": "flat",
+      "gate": "ST1",
+      "source_doc_section": "01_ECONOMY_FOUNDATION v1.7 §7 (Provisions Total 3S; D1 hard stop)",
+      "invariant_refs": ["DC1", "DC4", "DC6"]
+    },
+    {
+      "id": "eco.storage.iron.start_stock",
+      "path": "storage.Iron.start_stock",
+      "unit": "flat",
+      "gate": "world_creation",
+      "source_doc_section": "01_ECONOMY_FOUNDATION v1.7 §3 (owner-approved starting stock)",
+      "invariant_refs": ["DC1", "DC4"]
+    },
+    {
+      "id": "eco.storage.iron.safe_capacity_st1",
+      "path": "storage.Iron.safe_capacity_st1",
+      "unit": "flat",
+      "gate": "ST1",
+      "source_doc_section": "01_ECONOMY_FOUNDATION v1.7 §7 (Iron ST1 S; D1)",
+      "invariant_refs": ["DC1", "DC4", "DC6"]
+    },
+    {
+      "id": "eco.storage.iron.exposed_capacity_st1",
+      "path": "storage.Iron.exposed_capacity_st1",
+      "unit": "flat",
+      "gate": "ST1",
+      "source_doc_section": "01_ECONOMY_FOUNDATION v1.7 §7 (Iron exposed 2S; D1; no decay)",
+      "invariant_refs": ["DC1", "DC4", "DC6"]
+    },
+    {
+      "id": "eco.storage.iron.total_capacity_st1",
+      "path": "storage.Iron.total_capacity_st1",
+      "unit": "flat",
+      "gate": "ST1",
+      "source_doc_section": "01_ECONOMY_FOUNDATION v1.7 §7 (Iron Total 3S; D1 hard stop — idles at 3S)",
+      "invariant_refs": ["DC1", "DC4", "DC6"]
+    },
+    {
+      "id": "eco.storage.aether.start_stock",
+      "path": "storage.Aether.start_stock",
+      "unit": "flat",
+      "gate": "world_creation",
+      "source_doc_section": "01_ECONOMY_FOUNDATION v1.7 §3 (owner-approved starting stock: Aether 0)",
+      "invariant_refs": ["DC1", "DC4"]
+    },
+    {
+      "id": "eco.storage.aether.safe_capacity_st1",
+      "path": "storage.Aether.safe_capacity_st1",
+      "unit": "flat",
+      "gate": "ST4",
+      "source_doc_section": "01_ECONOMY_FOUNDATION v1.7 §7 (Aether S 200 gated ST4 — Crystal store; band seeded at A1, faucet is FUTURE BUILD)",
+      "invariant_refs": ["DC1", "DC4", "DC6"]
+    },
+    {
+      "id": "eco.storage.aether.exposed_capacity_st1",
+      "path": "storage.Aether.exposed_capacity_st1",
+      "unit": "flat",
+      "gate": "ST4",
+      "source_doc_section": "01_ECONOMY_FOUNDATION v1.7 §7 (Aether exposed 2S; D1; leak behavior is FUTURE BUILD — no pulse sim at A1)",
+      "invariant_refs": ["DC1", "DC4", "DC6"]
+    },
+    {
+      "id": "eco.storage.aether.total_capacity_st1",
+      "path": "storage.Aether.total_capacity_st1",
+      "unit": "flat",
+      "gate": "ST4",
+      "source_doc_section": "01_ECONOMY_FOUNDATION v1.7 §7 (Aether Total 3S; D1 hard stop)",
+      "invariant_refs": ["DC1", "DC4", "DC6"]
+    }
+  ]
+}

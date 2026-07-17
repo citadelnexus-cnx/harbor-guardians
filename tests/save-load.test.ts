@@ -1,6 +1,7 @@
 /**
  * Step 7 save/load tests — atomic write behavior (S7), empty-state round-trip
- * byte identity (S5 @ M0), and crash-during-write survival of the prior save.
+ * byte identity (S5 @ M0), crash-during-write survival of the prior save,
+ * and (Alpha A1) the stocked seeded-storage round-trip (S5 @ A1).
  * Runs on node:test via tsx (no new dependencies):
  *   pnpm run test:save
  *
@@ -18,9 +19,15 @@ import { test } from "node:test";
 import { loadSave, rollbackPath, saveAtomically, tempPath } from "../src/save/atomic-save.js";
 import { canonicalSerialize, NonSerializableSaveError } from "../src/save/canonical-json.js";
 import { createEmptySaveBlob } from "../src/save/empty-save.js";
-import { proveCrashDuringWriteSurvival, proveEmptyStateRoundTrip, SimulatedCrashError } from "../src/save/proofs.js";
+import {
+  proveCrashDuringWriteSurvival,
+  proveEmptyStateRoundTrip,
+  proveStockedStateRoundTrip,
+  SimulatedCrashError,
+} from "../src/save/proofs.js";
 import { createSaveBlobValidator, SaveValidationError } from "../src/save/save-blob-validator.js";
 import type { SaveBlob } from "../src/contracts/save-blob.js";
+import { loadStorageSeed } from "../sim-harness/storage-seed.js";
 
 const validate = createSaveBlobValidator();
 
@@ -87,6 +94,13 @@ test("S5 @ M0: empty-state save → load → re-serialize is byte-identical", ()
 test("S5 @ M0: full round-trip proof (as wired into the harness) passes", () => {
   withTempDir((dir) => {
     const proof = proveEmptyStateRoundTrip(dir, validate);
+    assert.ok(proof.pass, proof.detail);
+  });
+});
+
+test("S5 @ A1: stocked seeded-storage round-trip proof (as wired into the harness) passes", () => {
+  withTempDir((dir) => {
+    const proof = proveStockedStateRoundTrip(dir, validate, loadStorageSeed());
     assert.ok(proof.pass, proof.detail);
   });
 });
