@@ -217,6 +217,12 @@ export function checkDc6CoreResourceOnly(): CheckVerdict {
   if (!storageValidate(validSeed)) {
     return fail("DC6: the CoreResource-only storage seed failed its own schema — probe base is broken");
   }
+  if (!saveValidate(minimalValidSaveShape())) {
+    return fail(
+      `DC6: the CoreResource-only save-blob probe base failed its own schema — probe base is broken: ` +
+        `${JSON.stringify(saveValidate.errors)}`,
+    );
+  }
 
   const forbidden = ["Merit", "XP", "BondXP", "BondCharge"] as const;
   const problems: string[] = [];
@@ -260,7 +266,7 @@ export function checkDc6CoreResourceOnly(): CheckVerdict {
   );
 }
 
-/** A structurally valid empty save blob shape for the DC6 save-schema probe (matches createEmptySaveBlob). */
+/** A structurally valid empty save blob shape for the DC6 save-schema probe (matches createEmptySaveBlob, v2). */
 function minimalValidSaveShape(): Record<string, unknown> {
   const emptyBand = { safe: 0, exposed: 0 };
   return {
@@ -270,7 +276,7 @@ function minimalValidSaveShape(): Record<string, unknown> {
     buildings: [],
     workers: [],
     threat: { phase: "calm" },
-    claim_ledger: { packages: [] },
+    claim_ledger: { packages: [], story_claims: [] },
     pending_reward_resolution: [],
     system_messages: [],
     merit: {},

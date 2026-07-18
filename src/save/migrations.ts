@@ -53,7 +53,16 @@ function rawVersion(blob: RawSave): number {
   return version;
 }
 
-/** v1 → v2: claim_ledger gains its empty story_claims list (A2 shape). Pure; input untouched. */
+/**
+ * v1 → v2: claim_ledger gains its empty story_claims list (A2 shape). Pure;
+ * input untouched. Both content-bearing v1 blocks (`claim_ledger.packages`
+ * and `pending_reward_resolution`) were schema-enforced empty tuples under
+ * v1 — a real v1 save can never carry content in either. Non-empty content
+ * here means the file was hand-edited or corrupted outside this build, not
+ * that player value needs transforming: refusing loudly (not silently
+ * dropping or inventing state) is the correct response, mirrored identically
+ * across both blocks.
+ */
 function migrateV1ToV2(blob: RawSave): RawSave {
   const ledger = blob.claim_ledger;
   if (ledger === null || typeof ledger !== "object" || !Array.isArray((ledger as RawSave).packages)) {
@@ -65,6 +74,18 @@ function migrateV1ToV2(blob: RawSave): RawSave {
     // save was hand-edited or corrupt. Refuse rather than silently drop.
     throw new SaveMigrationError("v1 save claims ledger packages, but v1 could hold none — refusing to migrate");
   }
+
+  const pending = blob.pending_reward_resolution;
+  if (!Array.isArray(pending)) {
+    throw new SaveMigrationError("v1 save has a malformed pending_reward_resolution block — refusing to guess");
+  }
+  if (pending.length > 0) {
+    // The v1 schema enforced an empty pending_reward_resolution tuple;
+    // content here means the save was hand-edited or corrupt. Refuse rather
+    // than silently preserve impossible state.
+    throw new SaveMigrationError("v1 save claims pending reward resolutions, but v1 could hold none — refusing to migrate");
+  }
+
   return {
     ...blob,
     meta: { ...(blob.meta as RawSave), save_schema_version: rawVersion(blob) + 1 },

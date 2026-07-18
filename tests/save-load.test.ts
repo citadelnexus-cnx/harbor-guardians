@@ -167,6 +167,12 @@ test("migration: a v1 save claiming ledger content (impossible under the v1 sche
   assert.throws(() => migrateSaveBlobToCurrent(poisoned), SaveMigrationError);
 });
 
+test("migration: a v1 save claiming pending-reward content (impossible under the v1 schema) is refused, not silently dropped", () => {
+  const v1 = JSON.parse(readFileSync(V1_FIXTURE_PATH, "utf8")) as Record<string, unknown>;
+  const poisoned = { ...v1, pending_reward_resolution: [{ smuggled: true }] };
+  assert.throws(() => migrateSaveBlobToCurrent(poisoned), SaveMigrationError);
+});
+
 test("migration: malformed saves are refused (no meta, non-integer version)", () => {
   assert.throws(() => migrateSaveBlobToCurrent({}), SaveMigrationError);
   assert.throws(() => migrateSaveBlobToCurrent({ meta: { save_schema_version: "one" } }), SaveMigrationError);
