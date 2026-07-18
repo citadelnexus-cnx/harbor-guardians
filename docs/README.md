@@ -9,6 +9,7 @@ Code never contradicts these documents; on any gap or ambiguity, stop and ask (n
 - [`foundation/`](foundation/) — the closed 18-doc foundation set + its index: registers, amendments, art bible, docs 01–09, save/load spec, sim-harness acceptance spec.
 - [`phase-b/`](phase-b/) — Phase-B content: World Atlas (B2), Faction Codex (B3), Guardian Sanctum & Kit (B4), Flagship Kit Sheets (B4A), Launch Chassis Anchors (B4B).
 - [`reviews/`](reviews/) — external design review artifacts: the review disposition (R-D1–R-D6) and the Deep Roots pillar-refinement passalong.
+- [`progress/`](progress/) — the project progress ledger: a tracking record of phase status and authorization state, not doctrine.
 - Root of `/docs` — [`00_PRE_M0_MASTER_MANIFEST_v1.3.md`](00_PRE_M0_MASTER_MANIFEST_v1.3.md) (the doc map), [`M0_IMPLEMENTATION_READINESS_PACKET_v0.1.3.md`](M0_IMPLEMENTATION_READINESS_PACKET_v0.1.3.md) (the M0 spec), [`14_DESIGN_PILLARS_v0.1.md`](14_DESIGN_PILLARS_v0.1.md) (decision-filter doctrine, per R-D2/R-D6).
 
 Operating rules and the decision ledger live at repo root: [`CLAUDE.md`](../CLAUDE.md), [`AGENTS.md`](../AGENTS.md), [`DECISIONS.md`](../DECISIONS.md).
