@@ -1,0 +1,18 @@
+{
+  "schema_version": "0.1.0",
+  "rules": {
+    "max_unclaimed_packages_per_resource": "five",
+    "max_global_active_packages": 20,
+    "merit_slot_cap": 3
+  },
+  "value_metadata": [
+    {
+      "id": "rewards.claim_ledger.broken",
+      "path": "rules.max_global_active_packages",
+      "unit": "per_tavern_visit",
+      "gate": "v1",
+      "source_doc_section": "deliberately broken negative fixture — must FAIL validation (DC5)",
+      "invariant_refs": []
+    }
+  ]
+}

@@ -10,10 +10,17 @@
  * Implemented at Alpha A1 (owner A1 authorization 2026-07-16 — Minimal
  * Harbor State and Resource Spine): DC1, DC4, DC5, DC6 (checks in
  * data-contract-checks.ts), and S5 extended with the stocked seeded-storage
- * round-trip. Everything else remains a fail-loud stub — every E/L/M/C/
- * CARGO/OPS/TD/… invariant binds to a system that does not exist at A1
- * (production, offline, raids, ledger, cargo, events), and converting any
- * of them would claim untested capability.
+ * round-trip.
+ * Implemented at Alpha A2 (owner A2 authorization 2026-07-17 — Claim Ledger
+ * and Reward Routing): L1, L5, L6, L7, L11, L14 at A2 scope (checks in
+ * ledger-checks.ts — test-supplied packages only; no gameplay reward source
+ * exists), S5 extended with the reward-bearing ledger round-trip, and S7
+ * upgraded to crash-simulate over reward-bearing saves (the M0 "reward-
+ * duplication portion is future" limitation is closed at A2 scope).
+ * Everything else remains a fail-loud stub — every remaining invariant binds
+ * to a system that does not exist at A2 (production, offline, raids, cargo,
+ * inbox, grants, events), and converting any of them would claim untested
+ * capability.
  *
  * Governing docs (statements condensed from, and audited against):
  *   - SIM_HARNESS_ACCEPTANCE_SPEC v0.6.2 §4.1–§4.8 (E, L, M, C, CARGO, S, OPS, UX1)
@@ -38,6 +45,7 @@ import { join } from "node:path";
 import {
   proveCrashDuringWriteSurvival,
   proveEmptyStateRoundTrip,
+  proveLedgerStateRoundTrip,
   proveStockedStateRoundTrip,
   type ProofResult,
 } from "../src/save/proofs.js";
@@ -48,6 +56,15 @@ import {
   checkDc5ValidationGate,
   checkDc6CoreResourceOnly,
 } from "./data-contract-checks.js";
+import {
+  checkL1TransferOnly,
+  checkL5StoryClaimsProtected,
+  checkL6PartialClaimExact,
+  checkL7SlotAccounting,
+  checkL11FullSlotSafety,
+  checkL14PendingPersistence,
+} from "./ledger-checks.js";
+import { loadClaimLedgerRulesSeed } from "./ledger-rules-seed.js";
 import { loadStorageSeed } from "./storage-seed.js";
 import { InvariantStubError, type CheckVerdict, type InvariantEntry, type Suite } from "./types.js";
 
@@ -74,11 +91,15 @@ function stub(id: string, suite: Suite, statement: string, source: string): Inva
 // throwaway temp dir with deterministic evidence (no paths/wall-clock), so the
 // batch repeat-run determinism proof holds over the results.
 let saveBlobValidator: SaveBlobValidator | undefined;
-function runSaveProof(proof: (dir: string, validate: SaveBlobValidator) => ProofResult): CheckVerdict {
+function getSaveBlobValidator(): SaveBlobValidator {
   saveBlobValidator ??= createSaveBlobValidator();
+  return saveBlobValidator;
+}
+function runSaveProof(proof: (dir: string, validate: SaveBlobValidator) => ProofResult): CheckVerdict {
+  const validate = getSaveBlobValidator();
   const dir = mkdtempSync(join(tmpdir(), "hg-save-proof-"));
   try {
-    const result = proof(dir, saveBlobValidator);
+    const result = proof(dir, validate);
     return { pass: result.pass, evidence: result.detail };
   } finally {
     rmSync(dir, { recursive: true, force: true });
@@ -142,20 +163,63 @@ export const INVARIANT_REGISTRY: readonly InvariantEntry[] = [
   stub("E21", "E", "End-of-pulse display consistency: offline and online runs with the same seed and elapsed time produce the same final visible stock (online==offline, not stock==3S).", `${SIM} §4.1 + 01_ECONOMY_FOUNDATION v1.7 E21`),
 
   // ── Claim Ledger suite (L1–L15) — SIM spec §4.2 ───────────────────────────
-  stub("L1", "L", "Ledger transfer-only: cannot increase resource totals.", `${SIM} §4.2`),
+  // L1/L5/L6/L7/L11/L14 converted stub → implemented at Alpha A2 (owner A2
+  // authorization 2026-07-17); checks in ledger-checks.ts, exercising
+  // test-supplied packages against the A1 harbor spine. The rest stay
+  // fail-loud: L2 (no spend path exists at all to prove against), L3/L4/L8/L9
+  // (raids + raid-phase claim matrix), L10 (no gameplay sources — the literal
+  // test_supplied source_type is the A2 boundary), L12 (no repeatable
+  // activity system), L13 (no grant path), L15 (no mandatory threat events).
+  implemented(
+    "L1",
+    "L",
+    "Ledger transfer-only: cannot increase resource totals.",
+    `${SIM} §4.2 (A2 scope: route/claim conservation over test-supplied packages; gameplay sources FUTURE BUILD)`,
+    () => checkL1TransferOnly(),
+  ),
   stub("L2", "L", "Ledger not spendable directly: must claim into Harbor first.", `${SIM} §4.2`),
   stub("L3", "L", "Held rewards cannot be raided.", `${SIM} §4.2`),
   stub("L4", "L", "Claimed exposed resources can be raided.", `${SIM} §4.2`),
-  stub("L5", "L", "Story Claims never disappear (survive raids, offline, save/load, long absence).", `${SIM} §4.2`),
-  stub("L6", "L", "Partial-claim math preserves totals exactly: claimed + held_remainder == original.", `${SIM} §4.2`),
-  stub("L7", "L", "Multi-resource slot accounting correct (5 per resource + 20 global non-story).", `${SIM} §4.2`),
+  implemented(
+    "L5",
+    "L",
+    "Story Claims never disappear (survive raids, offline, save/load, long absence).",
+    `${SIM} §4.2 (A2 scope: survive all A2 ledger ops + save/load; raid/offline survival lands with those systems)`,
+    () => checkL5StoryClaimsProtected(getSaveBlobValidator()),
+  ),
+  implemented(
+    "L6",
+    "L",
+    "Partial-claim math preserves totals exactly: claimed + held_remainder == original.",
+    `${SIM} §4.2 + 04_REWARD_CLAIM_LEDGER_FOUNDATION v0.4 §7`,
+    () => checkL6PartialClaimExact(),
+  ),
+  implemented(
+    "L7",
+    "L",
+    "Multi-resource slot accounting correct (5 per resource + 20 global non-story).",
+    `${SIM} §4.2 + 04_REWARD_CLAIM_LEDGER_FOUNDATION v0.4 §5 (caps from data/rewards/claim_ledger_rules.json — DC1)`,
+    () => checkL7SlotAccounting(),
+  ),
   stub("L8", "L", "No claim during raid Assault.", `${SIM} §4.2`),
   stub("L9", "L", "Claiming to Exposed during Warning raises the exposed-risk preview.", `${SIM} §4.2`),
   stub("L10", "L", "Ineligible sources never enter the Ledger (production/market/dock overflow, cargo, Merit, XP, Bond XP, Bond Charge, direct build/repair payments).", `${SIM} §4.2`),
-  stub("L11", "L", "Full-slot delivery never deletes or duplicates a reward; unresolved pending rewards cannot be exploited as unlimited storage.", `${SIM} §4.2`),
+  implemented(
+    "L11",
+    "L",
+    "Full-slot delivery never deletes or duplicates a reward; unresolved pending rewards cannot be exploited as unlimited storage.",
+    `${SIM} §4.2 + 04_REWARD_CLAIM_LEDGER_FOUNDATION v0.4 §10 (A2 scope: optional-activity block is FUTURE BUILD)`,
+    () => checkL11FullSlotSafety(),
+  ),
   stub("L12", "L", "Story Claims are finite, non-repeatable, non-compounding; cannot become repeatable protected storage.", `${SIM} §4.2`),
   stub("L13", "L", "v1 system grants exist only via an approved migration/recovery/test path (production build-flag guarded, see S6).", `${SIM} §4.2`),
-  stub("L14", "L", "pending_reward_resolution persists across save/load and offline exactly as generated (no loss, duplication, or reroll); blocking locks only new optional reward generation.", `${SIM} §4.2`),
+  implemented(
+    "L14",
+    "L",
+    "pending_reward_resolution persists across save/load and offline exactly as generated (no loss, duplication, or reroll); blocking locks only new optional reward generation.",
+    `${SIM} §4.2 + SAVE_LOAD_TIME_RECONCILIATION_SPEC v0.5 §11 (A2 scope: save/load persistence; offline + activity-block land with those systems)`,
+    () => checkL14PendingPersistence(getSaveBlobValidator()),
+  ),
   stub("L15", "L", "Pending rewards cannot freeze mandatory threat resolution; required defensive/story-critical events resolve and may themselves enter pending resolution.", `${SIM} §4.2`),
 
   // ── Messages suite (M1–M10) — SIM spec §4.3 ───────────────────────────────
@@ -196,13 +260,20 @@ export const INVARIANT_REGISTRY: readonly InvariantEntry[] = [
     "S5",
     "S",
     "Save/load round-trip preserves world clock, storage states (incl. Crowns), threat phase, queues, Claim Ledger (incl. Story Claims, partial remainders, pending_reward_resolution), System Inbox, and combat suspend snapshot if present.",
-    `${SIM} §4.6 + SAVE_LOAD_TIME_RECONCILIATION_SPEC v0.5 §16 (M0: empty shell; A1: + stocked seeded 3S storage bands)`,
+    `${SIM} §4.6 + SAVE_LOAD_TIME_RECONCILIATION_SPEC v0.5 §16 (M0: empty shell; A1: + stocked 3S bands; A2: + Claim Ledger/Story Claims/pending)`,
     () => {
       const empty = runSaveProof(proveEmptyStateRoundTrip);
       if (!empty.pass) return empty;
       const stocked = runSaveProof((dir, validate) => proveStockedStateRoundTrip(dir, validate, loadStorageSeed()));
       if (!stocked.pass) return stocked;
-      return { pass: true, evidence: `[empty shell] ${empty.evidence} [A1 stocked state] ${stocked.evidence}` };
+      const ledger = runSaveProof((dir, validate) =>
+        proveLedgerStateRoundTrip(dir, validate, loadStorageSeed(), loadClaimLedgerRulesSeed()),
+      );
+      if (!ledger.pass) return ledger;
+      return {
+        pass: true,
+        evidence: `[empty shell] ${empty.evidence} [A1 stocked state] ${stocked.evidence} [A2 ledger state] ${ledger.evidence}`,
+      };
     },
   ),
   stub("S6", "S", "Production build-flag guard: system-grant code paths are compiled out/disabled in production except approved migration/recovery paths; no dev/debug grant path is reachable.", `${SIM} §4.6`),
@@ -210,8 +281,11 @@ export const INVARIANT_REGISTRY: readonly InvariantEntry[] = [
     "S7",
     "S",
     "Atomic save integrity: temp write → schema validate → flush → rename/swap → preserve prior good save; a simulated crash never corrupts the last known-good save and never duplicates rewards.",
-    `${SIM} §4.6 + SAVE_LOAD_TIME_RECONCILIATION_SPEC v0.5 §15 (M0 Step 7: empty-shell scope per Sim §7 M0 exit)`,
-    () => runSaveProof(proveCrashDuringWriteSurvival),
+    `${SIM} §4.6 + SAVE_LOAD_TIME_RECONCILIATION_SPEC v0.5 §15 (A2: crash simulation over reward-bearing saves — no reward duplication)`,
+    () =>
+      runSaveProof((dir, validate) =>
+        proveCrashDuringWriteSurvival(dir, validate, loadStorageSeed(), loadClaimLedgerRulesSeed()),
+      ),
   ),
 
   // ── Operations suite (OPS1) — SIM spec §4.7 ───────────────────────────────

@@ -1,4 +1,4 @@
-# /sim-harness — claim-to-test QA spine (M0 skeleton + A0 EVT registration + A1 data-contract checks)
+# /sim-harness — claim-to-test QA spine (M0 skeleton + A0 EVT registration + A1 data-contract checks + A2 claim-ledger checks)
 
 **One responsibility:** the headless CLI runner over the pure sim core (`/src/sim`) —
 persona matrix plus the claim-to-test invariant suites. QA per [`AGENTS.md`](../AGENTS.md):
@@ -8,7 +8,7 @@ Governing docs: [`SIM_HARNESS_ACCEPTANCE_SPEC v0.6.2`](../docs/foundation/SIM_HA
 (architecture §2, persona matrix §3, suites §4, report §5, gates §7, evidence §8);
 M0 packet §8; [`CLAUDE.md`](../CLAUDE.md) §3 (claim-to-test).
 
-## A1 state — registry + fail-loud stubs + first honest conversions
+## A2 state — registry + fail-loud stubs + honest conversions
 
 **No gameplay loop exists.** What exists:
 
@@ -32,6 +32,14 @@ M0 packet §8; [`CLAUDE.md`](../CLAUDE.md) §3 (claim-to-test).
   CoreResource-only storage typing probes; S5 extended with the stocked
   seeded-storage round-trip (3S bands from
   [`data/economy/storage.st1.json`](../data/economy/storage.st1.json)).
+  **Implemented (Alpha A2, owner authorization 2026-07-17):** L1, L5, L6, L7,
+  L11, L14 ([`ledger-checks.ts`](ledger-checks.ts)) at A2 scope — routing/
+  claiming conservation, Story Claim protection, partial-claim exactness,
+  seeded slot accounting ([`data/rewards/claim_ledger_rules.json`](../data/rewards/claim_ledger_rules.json)),
+  full-slot pending safety, and pending save/load persistence — over
+  **test-supplied packages only** (no gameplay reward source exists); S5
+  extended with the reward-bearing ledger round-trip and S7 upgraded to
+  crash-simulate over reward-bearing saves.
   Every other ID is a fail-loud stub: executing it **throws**
   (`InvariantStubError`) — "claimed but untested" is impossible. A feature PR
   turns its stub(s) green by replacing the check body, flipping `status` to
@@ -59,9 +67,10 @@ pnpm run sim:harness -- --invariant E2  # execute one invariant for real
 
 `--invariant <ID>` **exits 1 for every stub ID** — that is the point: an
 invariant stays a fail-loud stub until its feature is implemented and proven
-(S5/S7 exit 0 since M0 Step 7; DC1/DC4/DC5/DC6 exit 0 since Alpha A1). The
-batch records stubs as `STUB_FAIL_LOUD_VERIFIED`, never `PASS` — at A1 that
-is 126 stubs + 6 implemented.
+(S5/S7 exit 0 since M0 Step 7; DC1/DC4/DC5/DC6 exit 0 since Alpha A1;
+L1/L5/L6/L7/L11/L14 exit 0 since Alpha A2). The batch records stubs as
+`STUB_FAIL_LOUD_VERIFIED`, never `PASS` — at A2 that is 120 stubs + 12
+implemented.
 
 Batch reports are written to `sim-harness/reports/` (gitignored); they are
 evidence artifacts attached to PRs per Sim §8, not committed state.

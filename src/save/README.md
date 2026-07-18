@@ -4,7 +4,7 @@
 [`SAVE_LOAD_TIME_RECONCILIATION_SPEC v0.5`](../../docs/foundation/SAVE_LOAD_TIME_RECONCILIATION_SPEC_v0.5.md).
 Saves are atomic (S7) and never silently lose player value (CLAUDE.md §5).
 
-## M0 state (Step 7) — persistence spine only
+## State (M0 Step 7 spine · A1 stocked round-trip · A2 ledger blocks + migration)
 
 No gameplay, no reconciliation logic yet. What exists:
 
@@ -17,20 +17,27 @@ No gameplay, no reconciliation logic yet. What exists:
 - [`canonical-json.ts`](canonical-json.ts) — canonical serialization (sorted
   keys, 2-space indent, trailing newline); save → load → re-serialize is
   byte-identical, and silent field-dropping throws instead of losing state.
-- [`empty-save.ts`](empty-save.ts) — the empty/minimal M0 blob: every
-  Save/Load §16 block at identity state (zeros / calm / schema-enforced
-  empty). The blob type lives in
-  [`src/contracts/save-blob.ts`](../contracts/save-blob.ts);
+- [`empty-save.ts`](empty-save.ts) — the empty/minimal blob: every
+  Save/Load §16 block at identity state (zeros / calm / empty). The blob type
+  lives in [`src/contracts/save-blob.ts`](../contracts/save-blob.ts);
   `/schema/save_blob.schema.json` is generated from it (D39). Growing any
   block is a `save_schema_version` migration event (Save/Load §14).
+- [`migrations.ts`](migrations.ts) — the ordered, pure migration chain
+  (Save/Load §1/§14). v1→v2 (Alpha A2): the `claim_ledger` block grows
+  `{ packages, story_claims }`; committed v1 fixture at
+  [`tests/fixtures/save.v1.json`](../../tests/fixtures/save.v1.json) with a
+  round-trip test. Loading migrates in memory — the on-disk file is never
+  mutated by a load. The §14 Migration Notice is FUTURE BUILD with the
+  System Inbox.
 - [`save-blob-validator.ts`](save-blob-validator.ts) — ajv validation against
   the generated schema (§15 step 2).
-- [`proofs.ts`](proofs.ts) — the executable S5 (round-trip byte identity) and
-  S7 (crash-during-write survival) proofs, shared by
-  [`tests/save-load.test.ts`](../../tests/save-load.test.ts) and the
+- [`proofs.ts`](proofs.ts) — the executable S5 (round-trip byte identity at
+  empty / A1 stocked / A2 reward-bearing scopes) and S7 (crash-during-write
+  survival over reward-bearing saves — no reward duplication) proofs, shared
+  by [`tests/save-load.test.ts`](../../tests/save-load.test.ts) and the
   sim-harness registry (claim-to-test).
 
-Time reconciliation (§2–§9), migrations (§14), and content-bearing blocks are
+Time reconciliation (§2–§9) and the remaining content-bearing blocks are
 FUTURE BUILD — they land with their features, each behind its invariants.
 
 ## Commands

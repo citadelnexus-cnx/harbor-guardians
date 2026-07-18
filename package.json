@@ -16,6 +16,7 @@
     "sim:harness": "tsx sim-harness/run.ts",
     "test:save": "tsx --test tests/save-load.test.ts",
     "test:harbor": "tsx --test tests/harbor-state.test.ts",
+    "test:ledger": "tsx --test tests/claim-ledger.test.ts",
     "tauri": "tauri"
   },
   "devDependencies": {

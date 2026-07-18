@@ -54,6 +54,21 @@ export type Unit =
 export type RaidPhase = "calm" | "watch" | "warning" | "assault" | "aftermath";
 
 /**
+ * Reward delivery routes (Doc 07 §2; CARGO2 — every reward line declares
+ * exactly one route at generation time; D20 routing table, D24 one line/one
+ * route). Full five-value enum per Doc 07; at Alpha A2 only `claim_ledger`
+ * and `story_claim` have implemented delivery — `ship_hold_docked_cargo`,
+ * `gear_locker`, and `auto_receipt` are structurally present but BLOCKED
+ * (routing them fails loud; their systems are FUTURE BUILD, 04B/09/receipts).
+ */
+export type RewardRoute =
+  | "claim_ledger"
+  | "story_claim"
+  | "ship_hold_docked_cargo"
+  | "gear_locker"
+  | "auto_receipt";
+
+/**
  * The six elemental regions (World Atlas §3; working names per W-D1).
  * Canonical data form per B4A §4B — matches the B4A/B4B §6 seed objects
  * (display case, underscore for Umbral_Deep).

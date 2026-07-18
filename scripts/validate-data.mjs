@@ -26,6 +26,7 @@ import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import Ajv from "ajv";
 import {
+  CLAIM_LEDGER_RULES_SCHEMA_FILE,
   RESOURCE_STORAGE_SCHEMA_FILE,
   SCHEMA_BUILDS,
   SCHEMA_FILE,
@@ -46,6 +47,7 @@ const fail = (msg) => {
 const SEED_SETS = [
   { dir: "data/guardians", schemaFile: SCHEMA_FILE, payloadRoot: "kit", structuralCheck: null },
   { dir: "data/economy", schemaFile: RESOURCE_STORAGE_SCHEMA_FILE, payloadRoot: "storage", structuralCheck: check3SModel },
+  { dir: "data/rewards", schemaFile: CLAIM_LEDGER_RULES_SCHEMA_FILE, payloadRoot: "rules", structuralCheck: checkClaimLedgerRules },
 ];
 
 // 1. Drift guard (D39: every schema must be generated, never hand-edited).
@@ -116,6 +118,27 @@ function check3SModel(file, seed) {
     if (def.start_stock < 0 || def.safe_capacity_st1 <= 0) {
       fail(`${file}: ${resource} start_stock must be ≥ 0 and safe_capacity_st1 > 0`);
     }
+  }
+}
+
+/**
+ * Doc 04 §5 structural check (rewards claim-ledger rules seeds): slot caps
+ * are positive integers, and the global cap is not smaller than the
+ * per-resource cap (a per-resource cap above the global cap could never be
+ * reached — a seed like that would silently disable the §5 accounting).
+ */
+function checkClaimLedgerRules(file, seed) {
+  const { max_unclaimed_packages_per_resource: perResource, max_global_active_packages: global } = seed.rules;
+  for (const [name, value] of [
+    ["max_unclaimed_packages_per_resource", perResource],
+    ["max_global_active_packages", global],
+  ]) {
+    if (!Number.isInteger(value) || value <= 0) {
+      fail(`${file}: Doc 04 §5 — ${name} must be a positive integer, got ${value}`);
+    }
+  }
+  if (global < perResource) {
+    fail(`${file}: Doc 04 §5 — max_global_active_packages (${global}) < max_unclaimed_packages_per_resource (${perResource})`);
   }
 }
 

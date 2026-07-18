@@ -48,21 +48,15 @@
           "$ref": "#/definitions/ThreatBlock"
         },
         "claim_ledger": {
-          "type": "object",
-          "properties": {
-            "packages": {
-              "$ref": "#/definitions/EmptyListM0"
-            }
-          },
-          "required": [
-            "packages"
-          ],
-          "additionalProperties": false,
-          "description": "claim_package records (Doc 04 §13; story claims + remainders live inside packages)."
+          "$ref": "#/definitions/ClaimLedgerState",
+          "description": "Claim Ledger block (Save/Load §16: packages + story claims + remainders) — real shape since A2 (v2)."
         },
         "pending_reward_resolution": {
-          "$ref": "#/definitions/EmptyListM0",
-          "description": "pending_reward_resolution records (Save/Load §11, L14)."
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/PendingRewardResolution"
+          },
+          "description": "Persistent pending_reward_resolution records (Doc 04 §10; Save/Load §11; D19/L14) — real shape since A2 (v2)."
         },
         "system_messages": {
           "$ref": "#/definitions/EmptyListM0",
@@ -183,6 +177,210 @@
         "aftermath"
       ],
       "description": "Threat/raid phase vocabulary (Doc 07 §2; Doc 05 phase order). The empty world's zero-state is \"calm\"; an Assault never auto-resolves offline (D7)."
+    },
+    "ClaimLedgerState": {
+      "type": "object",
+      "properties": {
+        "packages": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/LedgerPackage"
+          }
+        },
+        "story_claims": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/StoryClaim"
+          }
+        }
+      },
+      "required": [
+        "packages",
+        "story_claims"
+      ],
+      "additionalProperties": false,
+      "description": "The Claim Ledger save/sim state (Save/Load §16 `claim_ledger` block: \"packages, story claims, remainders\" — remainders live inside packages)."
+    },
+    "LedgerPackage": {
+      "type": "object",
+      "properties": {
+        "package_id": {
+          "type": "string"
+        },
+        "source_type": {
+          "$ref": "#/definitions/RewardSourceType"
+        },
+        "contents": {
+          "$ref": "#/definitions/RewardPackageContents"
+        },
+        "created_world_clock": {
+          "$ref": "#/definitions/WorldClock"
+        },
+        "is_story": {
+          "type": "boolean",
+          "const": false,
+          "description": "Ledger packages are non-story by construction; Story Claims live in their own protected list."
+        },
+        "system_grant": {
+          "type": "boolean",
+          "const": false,
+          "description": "D13/L13: no system-grant path exists at A2 (literal false until the guarded feature lands)."
+        },
+        "held_remainder": {
+          "$ref": "#/definitions/RewardResources"
+        }
+      },
+      "required": [
+        "package_id",
+        "source_type",
+        "contents",
+        "created_world_clock",
+        "is_story",
+        "system_grant",
+        "held_remainder"
+      ],
+      "additionalProperties": false,
+      "description": "One held (earned-but-unclaimed) reward package in the Claim Ledger (Doc 04 §13; Save/Load §10; Doc 07 §3 `claim_package`).\n\n`contents` is the original as-routed package (immutable record of what was earned); `held_remainder` is what remains unclaimed — entries are strictly positive and never exceed their `contents` counterpart, so at any moment `claimed-so-far == contents − held_remainder` and every partial claim satisfies `claimed + held_remainder == original` (L6). A package with an empty held_remainder is fully claimed and leaves the Ledger."
+    },
+    "RewardSourceType": {
+      "type": "string",
+      "const": "test_supplied",
+      "description": "The only reward source that exists at A2: test-supplied packages driven by the harness/tests. Gameplay sources (Doc 04 §2) widen this union via migration when their features are authorized and implemented."
+    },
+    "RewardPackageContents": {
+      "type": "object",
+      "properties": {
+        "resources": {
+          "$ref": "#/definitions/RewardResources"
+        },
+        "flags": {
+          "$ref": "#/definitions/EmptyRewardListA2"
+        },
+        "cosmetics": {
+          "$ref": "#/definitions/EmptyRewardListA2"
+        },
+        "gear_refs": {
+          "$ref": "#/definitions/EmptyRewardListA2"
+        }
+      },
+      "required": [
+        "resources",
+        "flags",
+        "cosmetics",
+        "gear_refs"
+      ],
+      "additionalProperties": false,
+      "description": "Reward package contents (Doc 04 §4 / §13 `contents`). At A2 only the resource portion is real; flags/cosmetics/gear_refs are schema-enforced empty (FUTURE BUILD — Doc 04 §4, Doc 09)."
+    },
+    "RewardResources": {
+      "type": "object",
+      "properties": {
+        "Crowns": {
+          "type": "number"
+        },
+        "Provisions": {
+          "type": "number"
+        },
+        "Iron": {
+          "type": "number"
+        },
+        "Aether": {
+          "type": "number"
+        }
+      },
+      "additionalProperties": false,
+      "description": "Per-CoreResource reward amounts. Partial map — only resources actually present carry entries; the generated schema rejects any non-CoreResource key (Merit/XP/BondXP/BondCharge can never be packaged — Doc 04 §3, D26)."
+    },
+    "EmptyRewardListA2": {
+      "type": "array",
+      "minItems": 0,
+      "maxItems": 0,
+      "description": "A2 empty-block placeholder (M0 pattern): schema-enforced empty until the feature + migration land."
+    },
+    "StoryClaim": {
+      "type": "object",
+      "properties": {
+        "claim_id": {
+          "type": "string"
+        },
+        "source_type": {
+          "$ref": "#/definitions/RewardSourceType"
+        },
+        "contents": {
+          "$ref": "#/definitions/RewardPackageContents"
+        },
+        "created_world_clock": {
+          "$ref": "#/definitions/WorldClock"
+        },
+        "is_story": {
+          "type": "boolean",
+          "const": true
+        }
+      },
+      "required": [
+        "claim_id",
+        "source_type",
+        "contents",
+        "created_world_clock",
+        "is_story"
+      ],
+      "additionalProperties": false,
+      "description": "One protected Story Claim (Doc 04 §6/§11, D15): non-expiring, never deleted, never counts against slot caps. At A2 this is a structural placeholder — Story Claims are created by routing and preserved forever; claiming their resource portion into the Harbor is FUTURE BUILD (no gameplay story source exists to feed them)."
+    },
+    "PendingRewardResolution": {
+      "type": "object",
+      "properties": {
+        "pending_id": {
+          "type": "string"
+        },
+        "source_type": {
+          "$ref": "#/definitions/RewardSourceType"
+        },
+        "source_event_id": {
+          "type": "string"
+        },
+        "generated_reward_seed": {
+          "type": "number"
+        },
+        "package_contents": {
+          "$ref": "#/definitions/RewardPackageContents"
+        },
+        "created_world_clock": {
+          "$ref": "#/definitions/WorldClock"
+        },
+        "blocking_reason": {
+          "type": "string",
+          "description": "Deterministic description of the blocking slot(s), e.g. \"per_resource_cap:Crowns\" or \"global_cap\" (Doc 04 §10.6 \"naming the blocking slot\")."
+        },
+        "allowed_resolution_actions": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/PendingResolutionAction"
+          }
+        },
+        "related_system_message_id": {
+          "type": "null",
+          "description": "Literal null until the System Inbox exists (Doc 04A FUTURE BUILD); becomes a message link via migration (M2/M3/DC3)."
+        }
+      },
+      "required": [
+        "pending_id",
+        "source_type",
+        "source_event_id",
+        "generated_reward_seed",
+        "package_contents",
+        "created_world_clock",
+        "blocking_reason",
+        "allowed_resolution_actions",
+        "related_system_message_id"
+      ],
+      "additionalProperties": false,
+      "description": "One persistent pending reward (Doc 04 §10; Save/Load §11; Doc 07 §3; D14/D19/L11/L14): a non-story package that could not enter the Claim Ledger because a slot cap was full. Not in the Ledger, not spendable, never silently deleted, never duplicated by reload. At A2 `pending_id` is the blocked package's `package_id` (1:1, globally unique), preserving exact identity through block → resolve."
+    },
+    "PendingResolutionAction": {
+      "type": "string",
+      "const": "deliver_to_ledger",
+      "description": "The only pending-resolution action implemented at A2: re-deliver the package into the Claim Ledger once slot capacity frees. Doc 04 §10.3's further actions (direct claim, split, convert) are FUTURE BUILD and schema-rejected until implemented."
     },
     "EmptyMapM0": {
       "type": "object",
