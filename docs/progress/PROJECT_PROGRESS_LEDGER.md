@@ -30,12 +30,14 @@ This document tracks phase progress and authorization state across the whole pro
 | Alpha A0 | CLOSED |
 | Alpha A1 | CLOSED |
 | Alpha A2 | CLOSED |
-| Alpha A3 | NOT AUTHORIZED |
-| Alpha A4–A6 | FUTURE |
+| Alpha A3 | CLOSED |
+| Alpha A4 | NOT AUTHORIZED |
+| Alpha A5–A6 | FUTURE |
 | Beta | FUTURE |
 | Production | FUTURE |
 | Gameplay loop (any form) | NOT AUTHORIZED |
-| Events / expeditions / combat / raids / guardians / factions / cargo voyages | NOT AUTHORIZED |
+| Event rewards / effect execution / real event content | NOT AUTHORIZED |
+| Combat / raids / guardians / factions / cargo voyages | NOT AUTHORIZED |
 | Gameplay UI | NOT AUTHORIZED |
 | Deployment / production packaging | NOT AUTHORIZED |
 
@@ -93,25 +95,38 @@ This document tracks phase progress and authorization state across the whole pro
 - **Durable evidence:** PR #16 (`docs/alpha/ALPHA_A2_EXECUTION_BRIEF_v0.1.md`, `src/sim/claim-ledger.ts`, `src/contracts/claim-ledger.ts` / `claim-ledger-rules.ts`, `data/rewards/claim_ledger_rules.json`, `src/save/migrations.ts` [`save_schema_version` 1→2], `sim-harness/ledger-checks.ts`), plus a follow-up review-cleanup commit on the same PR (mirrored v1-tamper refusal for `pending_reward_resolution`; fixed a stale DC6 probe base shape). Owner authorization dated 2026-07-17.
 - **Implemented invariants:** L1, L5, L6, L7, L11, L14 (converted from stub, at explicitly A2-scoped evidence); S5 extended with the reward-bearing ledger round-trip; S7 upgraded to crash-simulate over reward-bearing saves. Running total after A2: **12 implemented, 120 fail-loud stubs, 132 registered.**
 - **Remaining blocked scope:** no gameplay reward source (packages are test-supplied only — `source_type` is schema-literal `"test_supplied"`); cargo/gear/auto-receipt reward routes are structurally present but fail loud if routed; no System Inbox; no raid-phase claim matrix (L8/L9 stay fail-loud); no story-claim harbor transfer; no gameplay UI, deployment, or production packaging.
-- **Next authorization gate:** Alpha A3 (not yet authorized).
+- **Next authorization gate:** Alpha A3 (already passed and closed; see below).
 
 ### Alpha A3
 
+- **Status:** CLOSED
+- **Purpose:** Expedition and Event Skeleton, Option A only — lifecycle mechanics without gameplay effects, event rewards, or a gameplay loop.
+- **Authorization:** limited owner authorization dated 2026-07-18; public-safe boundary recorded in `docs/alpha/ALPHA_A3_EXECUTION_BRIEF_v0.1.md`.
+- **Durable evidence:** PR #18, reviewed head `2a1254f147c56bc9742726ea0bbf339cfc67d0a3`, squash commit `245b73215cf9b098b8f54eaa559dabc1b49703d4`, CI run #41 successful.
+- **Delivered:** typed `Event` / `Condition` / `Outcome` / inert `Effect` contracts; generated schema-backed test fixtures only; deterministic nine-label lifecycle transitions; observable trigger evaluation limited to implemented A1 harbor and A2 Claim Ledger state; real-save-path event persistence through save schema v2→v3; full staged-effect descriptor integrity; non-empty and unique persisted `instance_id` enforcement.
+- **Implemented invariants:** EVT1, EVT2, EVT3, EVT4.
+- **Verification:** `test:events` 21/21; `test:ledger` 16/16; `test:save` 20/20; `test:harbor` 9/9; sim harness A3 BATCH GREEN.
+- **Result:** **16 implemented, 116 fail-loud stubs, 132 registered.**
+- **Remaining blocked scope:** EVT5–EVT10, event reward generation, event-to-Claim-Ledger delivery, any new Claim Ledger `source_type`, effect execution or dispatch, real event content, gameplay loop, combat, raids, threat behavior, guardians, factions, cargo voyages, gear gameplay, Harbor Inbox/messages, gameplay UI, deployment, and production work.
+- **Next authorization gate:** a separate owner architecture decision defining a bounded Alpha A4 scope. A3 closure does not imply or authorize A4.
+
+### Alpha A4
+
 - **Status:** NOT AUTHORIZED
-- **Purpose (anticipated, not yet defined by any brief):** the natural next boundary per the phase sequence is an Expedition and Event Skeleton — but no execution brief exists, and no scope has been defined or authorized. Nothing in this ledger constitutes a proposal of what A3 will contain; it is named only because it is the next sequential slot.
+- **Purpose:** Not yet selected, scoped, or defined by an approved execution brief.
 - **Durable evidence:** none.
 - **Implemented invariants:** none.
-- **Remaining blocked scope:** everything — including expeditions, events, combat, raids, guardians, factions, cargo voyages, gear gameplay, gameplay UI, deployment, and production work.
-- **Next authorization gate:** a separate, explicit owner authorization record naming Alpha A3's scope. See "Next valid artifact" below.
+- **Remaining blocked scope:** everything until a separate architecture decision, bounded execution brief, and explicit owner authorization exist.
+- **Next authorization gate:** an Alpha A4 Architecture Decision Record for owner review; architecture work only, not implementation authorization.
 
-### Alpha A4 / A5 / A6
+### Alpha A5 / A6
 
 - **Status:** FUTURE
 - **Purpose:** Not yet named, scoped, or defined by any document. Listed here only as placeholders in the phase sequence used for tracking; their existence, order, and content are not decided.
 - **Durable evidence:** none.
 - **Implemented invariants:** none.
 - **Remaining blocked scope:** everything.
-- **Next authorization gate:** not applicable until Alpha A3 closes and a further owner authorization defines the next phase.
+- **Next authorization gate:** not applicable until Alpha A4 closes and a further owner authorization defines the next phase.
 
 ### Beta
 
@@ -133,11 +148,11 @@ This document tracks phase progress and authorization state across the whole pro
 
 ## Current invariant summary
 
-As of Alpha A2 (PR #16), the sim-harness invariant registry (`sim-harness/registry.ts`) holds:
+As of closed Alpha A3 and merged PR #18, the sim-harness invariant registry (`sim-harness/registry.ts`) holds:
 
 - **132 total registered invariants** (every ID from the SIM_HARNESS_ACCEPTANCE_SPEC, Doc 07, and later specs is addressable — no ID is ever silently absent).
-- **12 implemented and proven green:** L1, L5, L6, L7, L11, L14, S5, S7, DC1, DC4, DC5, DC6.
-- **120 remain fail-loud stubs** — executing any of them throws `InvariantStubError`; none is claimed as passing without a real feature and evidence behind it.
+- **16 implemented and proven green:** L1, L5, L6, L7, L11, L14, S5, S7, DC1, DC4, DC5, DC6, EVT1, EVT2, EVT3, EVT4.
+- **116 remain fail-loud stubs** — executing any of them throws `InvariantStubError`; none is claimed as passing without a real feature and evidence behind it.
 
 This is evidence, not a target: the count only changes when a future phase PR converts a specific stub to a real, tested check.
 
@@ -160,7 +175,8 @@ Recorded from the Alpha A2 review (findings not fixed in A2's scope; not blockin
 
 ## Next valid artifact
 
-**Alpha A3 Authorization Record — Expedition and Event Skeleton**
+**Alpha A4 Architecture Decision Record**
 
-- **Status: NOT AUTHORIZED.**
-- No such record exists in this repo. This ledger names it only as the next sequential slot in the phase structure; it does not propose, draft, or imply A3's contents, and no Alpha A3 work of any kind may begin until a separate, explicit owner authorization is issued and recorded via a new `docs/alpha/ALPHA_A3_EXECUTION_BRIEF_*` document, following the same pattern as A0/A1/A2.
+- **Status: NOT AUTHORIZED FOR IMPLEMENTATION.**
+- The next valid work is architecture and scope selection only: compare bounded options, identify dependencies and risks, and prepare a proposed execution brief for owner review.
+- No Alpha A4 code, schema, invariant conversion, gameplay behavior, deployment, or production work may begin until the owner separately authorizes a named A4 option.
