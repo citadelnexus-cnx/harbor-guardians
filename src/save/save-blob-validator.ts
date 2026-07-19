@@ -25,14 +25,55 @@ export class SaveValidationError extends Error {
   }
 }
 
+/**
+ * Thrown when the persisted events collection violates instance-identity
+ * integrity — a semantic invariant JSON Schema cannot express (non-empty
+ * string, unique-by-field). Like a schema failure it aborts before commit
+ * (in saveAtomically) and before an event can be resumed (in loadSave).
+ */
+export class SaveIdentityError extends Error {
+  constructor(detail: string) {
+    super(`save blob failed persisted-identity validation — aborted before commit/resume (EVT3): ${detail}`);
+    this.name = "SaveIdentityError";
+  }
+}
+
 export type SaveBlobValidator = (blob: unknown) => asserts blob is SaveBlob;
 
 /** Default location of the generated schema, relative to the repo root (the cwd for all M0 tooling). */
 export const SAVE_BLOB_SCHEMA_PATH = "schema/save_blob.schema.json";
 
 /**
+ * Pure identity-level invariant over the persisted `events` collection
+ * (EVT3): every `instance_id` is a non-empty string, and every `instance_id`
+ * is unique across the whole collection — so a duplicate or empty identity
+ * is rejected loudly before an event can be resumed. Multiple DISTINCT
+ * instances may legitimately reference the same `event_id`; that is not an
+ * identity conflict. JSON Schema cannot express unique-by-property, so this
+ * runs alongside schema validation in the real save path.
+ */
+export function assertPersistedEventIdentity(events: ReadonlyArray<{ instance_id: string }>): void {
+  const seen = new Set<string>();
+  for (const [index, record] of events.entries()) {
+    const id = record.instance_id;
+    if (typeof id !== "string" || id === "") {
+      throw new SaveIdentityError(`events[${index}] has an empty or non-string instance_id`);
+    }
+    if (seen.has(id)) {
+      throw new SaveIdentityError(
+        `duplicate persisted instance_id "${id}" — exactly-once lifecycle resumption requires unique event identity`,
+      );
+    }
+    seen.add(id);
+  }
+}
+
+/**
  * Compile a validator from the committed generated schema. Throws
- * SaveValidationError from the returned function on any schema violation.
+ * SaveValidationError on any schema violation, then SaveIdentityError on any
+ * persisted-events identity violation the schema cannot express. Both
+ * saveAtomically (pre-commit) and loadSave (post-migration) call the returned
+ * validator, so neither the identity guard nor the schema check is bypassable.
  */
 export function createSaveBlobValidator(schemaPath: string = SAVE_BLOB_SCHEMA_PATH): SaveBlobValidator {
   const schema = JSON.parse(readFileSync(schemaPath, "utf8"));
@@ -42,5 +83,9 @@ export function createSaveBlobValidator(schemaPath: string = SAVE_BLOB_SCHEMA_PA
     if (!validate(blob)) {
       throw new SaveValidationError(ajv.errorsText(validate.errors, { separator: "; " }));
     }
+    // Schema passed → the blob has the SaveBlob shape (events: EventInstance[]
+    // with string instance_id). Enforce the unique/non-empty identity
+    // invariant the schema cannot express.
+    assertPersistedEventIdentity((blob as SaveBlob).events);
   };
 }

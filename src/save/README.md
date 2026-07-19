@@ -4,7 +4,7 @@
 [`SAVE_LOAD_TIME_RECONCILIATION_SPEC v0.5`](../../docs/foundation/SAVE_LOAD_TIME_RECONCILIATION_SPEC_v0.5.md).
 Saves are atomic (S7) and never silently lose player value (CLAUDE.md §5).
 
-## State (M0 Step 7 spine · A1 stocked round-trip · A2 ledger blocks + migration)
+## State (M0 Step 7 spine · A1 stocked round-trip · A2 ledger blocks + migration · A3 events block + migration)
 
 No gameplay, no reconciliation logic yet. What exists:
 
@@ -25,17 +25,23 @@ No gameplay, no reconciliation logic yet. What exists:
 - [`migrations.ts`](migrations.ts) — the ordered, pure migration chain
   (Save/Load §1/§14). v1→v2 (Alpha A2): the `claim_ledger` block grows
   `{ packages, story_claims }`; committed v1 fixture at
-  [`tests/fixtures/save.v1.json`](../../tests/fixtures/save.v1.json) with a
-  round-trip test. Loading migrates in memory — the on-disk file is never
-  mutated by a load. The §14 Migration Notice is FUTURE BUILD with the
-  System Inbox.
+  [`tests/fixtures/save.v1.json`](../../tests/fixtures/save.v1.json).
+  v2→v3 (Alpha A3): the `events` block is added (mid-flight event-lifecycle
+  instances, EVT3); committed v2 fixture at
+  [`tests/fixtures/save.v2.json`](../../tests/fixtures/save.v2.json). Each
+  step refuses a tampered older save that carries content its schema could
+  not hold, and round-trips its committed fixture. Loading migrates in
+  memory — the on-disk file is never mutated by a load. The §14 Migration
+  Notice is FUTURE BUILD with the System Inbox.
 - [`save-blob-validator.ts`](save-blob-validator.ts) — ajv validation against
   the generated schema (§15 step 2).
 - [`proofs.ts`](proofs.ts) — the executable S5 (round-trip byte identity at
   empty / A1 stocked / A2 reward-bearing scopes) and S7 (crash-during-write
   survival over reward-bearing saves — no reward duplication) proofs, shared
   by [`tests/save-load.test.ts`](../../tests/save-load.test.ts) and the
-  sim-harness registry (claim-to-test).
+  sim-harness registry (claim-to-test). The A3 event-lifecycle persistence
+  proof (EVT3) reuses this pipeline from
+  [`sim-harness/event-checks.ts`](../../sim-harness/event-checks.ts).
 
 Time reconciliation (§2–§9) and the remaining content-bearing blocks are
 FUTURE BUILD — they land with their features, each behind its invariants.

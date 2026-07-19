@@ -1,0 +1,63 @@
+{
+  "schema_version": "0.1.0",
+  "event": {
+    "event_id": "fix.expedition.tidewatch",
+    "class": "expedition",
+    "triggers": [
+      {
+        "kind": "harbor_resource_at_least",
+        "resource": "Provisions",
+        "band": "safe",
+        "amount": 100
+      },
+      {
+        "kind": "ledger_global_occupancy_at_most",
+        "count": 5
+      }
+    ],
+    "offer_window": {
+      "kind": "player_choice",
+      "window_ref": "wnd.standard_offer"
+    },
+    "objectives": [
+      {
+        "objective_id": "obj.survey_route"
+      }
+    ],
+    "outcomes": [
+      {
+        "outcome_id": "out.success",
+        "effects": [
+          {
+            "effect_id": "fx.reward_note",
+            "binds_to": "claim_ledger"
+          }
+        ]
+      },
+      {
+        "outcome_id": "out.withdrawn",
+        "effects": []
+      }
+    ],
+    "chain_next": null,
+    "invariant_refs": ["EVT1", "EVT2", "EVT3", "EVT4"]
+  },
+  "value_metadata": [
+    {
+      "id": "fix.expedition.tidewatch.trigger.provisions_safe",
+      "path": "event.triggers[0].amount",
+      "unit": "flat",
+      "gate": "test_fixture_only",
+      "source_doc_section": "15_EVENT_SYSTEM_SPEC v0.2 §3 (Condition — observable state); ALPHA_A3_EXECUTION_BRIEF v0.1 §1 (test fixtures only, A1 harbor observable)",
+      "invariant_refs": ["EVT1", "EVT4", "DC4"]
+    },
+    {
+      "id": "fix.expedition.tidewatch.trigger.ledger_occupancy",
+      "path": "event.triggers[1].count",
+      "unit": "flat",
+      "gate": "test_fixture_only",
+      "source_doc_section": "15_EVENT_SYSTEM_SPEC v0.2 §3 (Condition — observable state); ALPHA_A3_EXECUTION_BRIEF v0.1 §1 (test fixtures only, A2 ledger observable)",
+      "invariant_refs": ["EVT1", "EVT4", "DC4"]
+    }
+  ]
+}

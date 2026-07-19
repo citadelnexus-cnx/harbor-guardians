@@ -1,0 +1,333 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$ref": "#/definitions/EventFixtureSeed",
+  "definitions": {
+    "EventFixtureSeed": {
+      "type": "object",
+      "properties": {
+        "schema_version": {
+          "type": "string"
+        },
+        "event": {
+          "$ref": "#/definitions/Event"
+        },
+        "value_metadata": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/SeedValueMetadata"
+          }
+        }
+      },
+      "required": [
+        "schema_version",
+        "event",
+        "value_metadata"
+      ],
+      "additionalProperties": false,
+      "description": "A tests/fixtures/events/ fixture file: versioned envelope (DC5) around one Event plus DC4 metadata (shared SeedValueMetadata shape) for every numeric leaf under `event`. Test-only — never loaded by runtime code and never part of the /data seed-discovery path (EVT1 asserts data/events does not exist)."
+    },
+    "Event": {
+      "type": "object",
+      "properties": {
+        "event_id": {
+          "type": "string"
+        },
+        "class": {
+          "$ref": "#/definitions/EventClass"
+        },
+        "triggers": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Condition"
+          },
+          "description": "ALL must hold against the observed state to become ELIGIBLE (Doc 15 §3)."
+        },
+        "offer_window": {
+          "$ref": "#/definitions/OfferWindow"
+        },
+        "objectives": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Objective"
+          }
+        },
+        "outcomes": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Outcome"
+          },
+          "description": "Resolution branches; exactly one is selected deterministically at ACTIVE → RESOLVING."
+        },
+        "chain_next": {
+          "type": "null",
+          "description": "Literal null: multi-step chains are FUTURE BUILD (EVT10) — the schema rejects any non-null value."
+        },
+        "invariant_refs": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "EVT + any suite this event touches (Doc 15 §3)."
+        }
+      },
+      "required": [
+        "event_id",
+        "class",
+        "triggers",
+        "offer_window",
+        "objectives",
+        "outcomes",
+        "chain_next",
+        "invariant_refs"
+      ],
+      "additionalProperties": false,
+      "description": "A data-defined event (Doc 15 §3 at A3 scope). At A3 these exist ONLY as schema-validated test fixtures under tests/fixtures/events/ — no real /data event content, no runtime content loading (A3 brief §2)."
+    },
+    "EventClass": {
+      "type": "string",
+      "enum": [
+        "threat",
+        "expedition",
+        "quest",
+        "world",
+        "faction",
+        "seasonal"
+      ],
+      "description": "Event taxonomy (Doc 15 §1/§3) — pure classification labels; the A3 lifecycle is class-agnostic."
+    },
+    "Condition": {
+      "anyOf": [
+        {
+          "type": "object",
+          "properties": {
+            "kind": {
+              "type": "string",
+              "const": "harbor_resource_at_least",
+              "description": "A1 harbor spine observation: the named band of a CoreResource is at least `amount`."
+            },
+            "resource": {
+              "$ref": "#/definitions/CoreResource"
+            },
+            "band": {
+              "$ref": "#/definitions/ObservableBand"
+            },
+            "amount": {
+              "type": "number"
+            }
+          },
+          "required": [
+            "kind",
+            "resource",
+            "band",
+            "amount"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "kind": {
+              "type": "string",
+              "const": "ledger_global_occupancy_at_most",
+              "description": "A2 Claim Ledger observation: global non-story package occupancy is at most `count` (Doc 04 §5 slots)."
+            },
+            "count": {
+              "type": "number"
+            }
+          },
+          "required": [
+            "kind",
+            "count"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "kind": {
+              "type": "string",
+              "const": "event_resolved",
+              "description": "Prior-event completion: the referenced event id appears in the observed resolved set."
+            },
+            "event_id": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "kind",
+            "event_id"
+          ],
+          "additionalProperties": false
+        }
+      ],
+      "description": "Trigger conditions (EVT4): a CLOSED union over observable state that exists at A3 — nothing else is expressible. Every numeric threshold in a fixture carries DC4 metadata (the fixture envelope enforces coverage)."
+    },
+    "CoreResource": {
+      "type": "string",
+      "enum": [
+        "Crowns",
+        "Provisions",
+        "Iron",
+        "Aether"
+      ],
+      "description": "The four storable, spendable, cap-bound resources (Doc 07 §2, D26). Storage, exposed surplus, cargo, and raid loss type against CoreResource ONLY (DC6) — never StandingResource or ReceiptMetric."
+    },
+    "ObservableBand": {
+      "type": "string",
+      "enum": [
+        "safe",
+        "exposed",
+        "total"
+      ],
+      "description": "Storage-band selector for harbor-observing conditions (\"total\" = safe + exposed)."
+    },
+    "OfferWindow": {
+      "anyOf": [
+        {
+          "type": "object",
+          "properties": {
+            "kind": {
+              "type": "string",
+              "const": "player_choice"
+            },
+            "window_ref": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "kind",
+            "window_ref"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "kind": {
+              "type": "string",
+              "const": "imposed"
+            }
+          },
+          "required": [
+            "kind"
+          ],
+          "additionalProperties": false
+        }
+      ],
+      "description": "Offer-window reference (Doc 15 §3 `offer_window: Timer | \"imposed\"`). At A3 no clock exists: `window_ref` is a reference label, and expiry is an explicit harness-supplied signal. Real timer mechanics are FUTURE BUILD (EVT7/D35 fairness doctrine binds when they exist)."
+    },
+    "Objective": {
+      "type": "object",
+      "properties": {
+        "objective_id": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "objective_id"
+      ],
+      "additionalProperties": false,
+      "description": "Structural objective reference (Doc 15 §3). Inert at A3 — completion is a harness-supplied signal, not evaluated gameplay."
+    },
+    "Outcome": {
+      "type": "object",
+      "properties": {
+        "outcome_id": {
+          "type": "string"
+        },
+        "effects": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Effect"
+          }
+        }
+      },
+      "required": [
+        "outcome_id",
+        "effects"
+      ],
+      "additionalProperties": false,
+      "description": "One resolution branch (Doc 15 §3): the effects staged if this outcome is selected at ACTIVE → RESOLVING."
+    },
+    "Effect": {
+      "type": "object",
+      "properties": {
+        "effect_id": {
+          "type": "string"
+        },
+        "binds_to": {
+          "$ref": "#/definitions/EffectBinding"
+        }
+      },
+      "required": [
+        "effect_id",
+        "binds_to"
+      ],
+      "additionalProperties": false,
+      "description": "Inert effect descriptor (Doc 15 §4): names the existing system it would route through. Carries NO amounts, NO payload, NO execution path — it is staged and preserved by the lifecycle, never applied (A3 brief §2)."
+    },
+    "EffectBinding": {
+      "type": "string",
+      "enum": [
+        "claim_ledger",
+        "ship_hold_docked_cargo",
+        "threat_director",
+        "economy_modifier",
+        "faction_standing",
+        "harbor_inbox",
+        "guardian_reaction"
+      ],
+      "description": "The existing system an effect WOULD bind to (Doc 15 §4 table). Pure reference vocabulary at A3: no dispatch to any of these systems exists, and the lifecycle never interprets this field (EVT5/EVT6 fail-loud)."
+    },
+    "SeedValueMetadata": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "path": {
+          "type": "string"
+        },
+        "unit": {
+          "$ref": "#/definitions/Unit"
+        },
+        "gate": {
+          "type": "string"
+        },
+        "source_doc_section": {
+          "type": "string"
+        },
+        "invariant_refs": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "required": [
+        "id",
+        "path",
+        "unit",
+        "gate",
+        "source_doc_section",
+        "invariant_refs"
+      ],
+      "additionalProperties": false,
+      "description": "DC4 unit-requirement metadata for one numeric seed value. `path` is the dot-path of the numeric field under the seed's payload root (`kit` for guardian seeds, `storage` for resource-storage seeds); the validator enforces that every numeric leaf has exactly one entry and every entry resolves to a numeric leaf."
+    },
+    "Unit": {
+      "type": "string",
+      "enum": [
+        "per_pulse",
+        "per_minute",
+        "per_world_day",
+        "per_run",
+        "per_quest",
+        "flat"
+      ],
+      "description": "Value-cadence vocabulary for seed metadata (Doc 07 §2 / §1.2, DC4)."
+    }
+  },
+  "$id": "hg.event_fixture_seed",
+  "$comment": "GENERATED from src/contracts/event.ts (D39) — do not edit by hand; run `pnpm run schema:generate`."
+}

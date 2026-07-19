@@ -58,6 +58,13 @@
           },
           "description": "Persistent pending_reward_resolution records (Doc 04 §10; Save/Load §11; D19/L14) — real shape since A2 (v2)."
         },
+        "events": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/EventInstance"
+          },
+          "description": "Mid-flight event-lifecycle instances (Doc 15 §2; EVT3) — real shape since A3 (v3). Inert staged effects only; no effect execution exists."
+        },
         "system_messages": {
           "$ref": "#/definitions/EmptyListM0",
           "description": "system_message records (Save/Load §12, M8)."
@@ -84,6 +91,7 @@
         "threat",
         "claim_ledger",
         "pending_reward_resolution",
+        "events",
         "system_messages",
         "merit",
         "guardian_bond",
@@ -381,6 +389,88 @@
       "type": "string",
       "const": "deliver_to_ledger",
       "description": "The only pending-resolution action implemented at A2: re-deliver the package into the Claim Ledger once slot capacity frees. Doc 04 §10.3's further actions (direct claim, split, convert) are FUTURE BUILD and schema-rejected until implemented."
+    },
+    "EventInstance": {
+      "type": "object",
+      "properties": {
+        "instance_id": {
+          "type": "string"
+        },
+        "event_id": {
+          "type": "string",
+          "description": "Stable identity of the defining Event; never changes across transitions (EVT2)."
+        },
+        "state": {
+          "$ref": "#/definitions/EventLifecycleState"
+        },
+        "selected_outcome_id": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "Set exactly once at ACTIVE → RESOLVING; null before that."
+        },
+        "staged_effects": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Effect"
+          }
+        }
+      },
+      "required": [
+        "instance_id",
+        "event_id",
+        "state",
+        "selected_outcome_id",
+        "staged_effects"
+      ],
+      "additionalProperties": false,
+      "description": "One in-flight event's persistent state — the shape that lives in the SaveBlob `events` block (v3) so EVT3's save-atomicity claim is about the REAL save path, not a side file. `staged_effects` are inert copies made at ACTIVE → RESOLVING and preserved verbatim through RESOLVING → RESOLVED and across save/load: never executed, never duplicated, never dropped."
+    },
+    "EventLifecycleState": {
+      "type": "string",
+      "enum": [
+        "DORMANT",
+        "ELIGIBLE",
+        "OFFERED",
+        "TRIGGERED",
+        "ACTIVE",
+        "RESOLVING",
+        "RESOLVED",
+        "EXPIRED",
+        "DECLINED"
+      ],
+      "description": "Lifecycle state labels (Doc 15 §2; A3 brief §1.3). OFFERED and TRIGGERED are mutually exclusive paths — player-choice events offer, imposed events trigger; the slash notation in Doc 15's diagram expresses alternatives, never a literal combined state. RESOLVED, EXPIRED, and DECLINED are terminal."
+    },
+    "Effect": {
+      "type": "object",
+      "properties": {
+        "effect_id": {
+          "type": "string"
+        },
+        "binds_to": {
+          "$ref": "#/definitions/EffectBinding"
+        }
+      },
+      "required": [
+        "effect_id",
+        "binds_to"
+      ],
+      "additionalProperties": false,
+      "description": "Inert effect descriptor (Doc 15 §4): names the existing system it would route through. Carries NO amounts, NO payload, NO execution path — it is staged and preserved by the lifecycle, never applied (A3 brief §2)."
+    },
+    "EffectBinding": {
+      "type": "string",
+      "enum": [
+        "claim_ledger",
+        "ship_hold_docked_cargo",
+        "threat_director",
+        "economy_modifier",
+        "faction_standing",
+        "harbor_inbox",
+        "guardian_reaction"
+      ],
+      "description": "The existing system an effect WOULD bind to (Doc 15 §4 table). Pure reference vocabulary at A3: no dispatch to any of these systems exists, and the lifecycle never interprets this field (EVT5/EVT6 fail-loud)."
     },
     "EmptyMapM0": {
       "type": "object",

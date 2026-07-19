@@ -13,6 +13,14 @@
  *     no packages or pending records (empty tuples by schema), so the
  *     migration adds the empty `story_claims` list and bumps the version —
  *     no player value exists to transform, none is created or lost.
+ *   - v2 → v3 (Alpha A3, owner authorization 2026-07-18, Option A): the
+ *     `events` block (mid-flight event-lifecycle instances, EVT3) is added
+ *     empty. A v2 save cannot legally carry an `events` key at all
+ *     (additionalProperties=false in the v2 schema), so a "v2" save that
+ *     already has one was hand-edited or corrupted and is refused loudly.
+ *     Every A2 block — resources, claim_ledger packages/story claims,
+ *     pending records — passes through byte-preserved: nothing is
+ *     transformed, created, or lost.
  *
  * The Save/Load §14 Migration Notice ("written to the System Inbox, M6") is
  * FUTURE BUILD: no System Inbox exists at A2 (Doc 04A unimplemented; M6
@@ -93,9 +101,32 @@ function migrateV1ToV2(blob: RawSave): RawSave {
   };
 }
 
+/**
+ * v2 → v3: the save gains its empty `events` block (A3 shape). Pure; input
+ * untouched. The v2 schema's additionalProperties=false means a real v2 save
+ * can never contain an `events` key — one already present means the file was
+ * hand-edited or corrupted outside this build, and is refused loudly rather
+ * than silently trusted or dropped (same tamper stance as v1 → v2). All A2
+ * player value (resources, ledger packages, story claims, pending records)
+ * passes through untouched.
+ */
+function migrateV2ToV3(blob: RawSave): RawSave {
+  if ("events" in blob) {
+    throw new SaveMigrationError(
+      "v2 save already carries an events block, but v2 could hold none — refusing to migrate",
+    );
+  }
+  return {
+    ...blob,
+    meta: { ...(blob.meta as RawSave), save_schema_version: rawVersion(blob) + 1 },
+    events: [],
+  };
+}
+
 /** Ordered migration chain: MIGRATIONS[v] brings a version-v save to v+1. */
 const MIGRATIONS: Readonly<Record<number, (blob: RawSave) => RawSave>> = {
   1: migrateV1ToV2,
+  2: migrateV2ToV3,
 };
 
 /**

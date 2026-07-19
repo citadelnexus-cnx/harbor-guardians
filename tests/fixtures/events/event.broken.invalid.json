@@ -1,0 +1,28 @@
+{
+  "schema_version": "0.1.0",
+  "event": {
+    "event_id": "fix.event.broken",
+    "class": "faction",
+    "triggers": [
+      {
+        "kind": "faction_standing_at_least",
+        "faction": "gilded_wake",
+        "standing": 3
+      }
+    ],
+    "offer_window": {
+      "kind": "imposed"
+    },
+    "objectives": [],
+    "outcomes": [
+      {
+        "outcome_id": "out.never",
+        "effects": []
+      }
+    ],
+    "chain_next": "fix.event.next",
+    "surfacing": "raid_notice",
+    "invariant_refs": []
+  },
+  "value_metadata": []
+}

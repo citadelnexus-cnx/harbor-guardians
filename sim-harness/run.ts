@@ -1,11 +1,12 @@
 /**
  * Headless sim-harness runner (CLI) — M0 skeleton + A0 EVT registration +
  * A1 data-contract/harbor-spine checks + A2 claim-ledger/reward-routing
- * checks (owner A2 authorization 2026-07-17).
+ * checks + A3 event-lifecycle checks (owner A3 authorization 2026-07-18,
+ * Option A).
  *
- * What it does at A2 (no gameplay LOOP — A2 authorizes the Claim Ledger /
- * reward-routing spine only, test-supplied packages, no gameplay reward
- * source; M0 packet §1/§8 doctrine still applies):
+ * What it does at A3 (no gameplay LOOP — A3 authorizes the event-lifecycle
+ * skeleton only: test-fixture events, signal-driven transitions, inert
+ * effects, no reward generation; M0 packet §1/§8 doctrine still applies):
  *   1. Registry integrity: every required invariant ID (E/L/M/C/S/OPS/CARGO/
  *      TD/A11Y/DC/OB/GEAR/W/FCT/GDN/EVT/UX1) is registered exactly once.
  *   2. Seed-validation gate: the harness consumes only schema-validated
@@ -33,8 +34,8 @@
  * Implemented: S5/S7 (M0 Step 7; S5 extended at A1 with the stocked
  * round-trip and at A2 with the reward-bearing ledger round-trip; S7
  * upgraded at A2 to reward-bearing crash simulation) + DC1/DC4/DC5/DC6
- * (Alpha A1) + L1/L5/L6/L7/L11/L14 (Alpha A2, A2 scope); all other IDs are
- * fail-loud stubs.
+ * (Alpha A1) + L1/L5/L6/L7/L11/L14 (Alpha A2, A2 scope) + EVT1/EVT2/EVT3/
+ * EVT4 (Alpha A3 Option A, A3 scope); all other IDs are fail-loud stubs.
  */
 
 import { spawnSync } from "node:child_process";
@@ -132,7 +133,7 @@ const problem = (msg: string) => {
   console.error(`FAIL  ${msg}`);
 };
 
-console.log(`sim-harness A2 batch — seed ${seed}\n`);
+console.log(`sim-harness A3 batch — seed ${seed}\n`);
 
 // 1. Registry integrity
 const integrityProblems = verifyRegistryIntegrity();
@@ -237,11 +238,11 @@ const personaIds = personas.map((p) =>
 );
 const personasWithBehavior = personas.filter((p) => p.run !== undefined);
 if (personasWithBehavior.length > 0) {
-  // Through A2 no persona may claim a behavior model (scope guard, CLAUDE.md
-  // §7; A2 authorizes the claim-ledger/reward-routing spine only — no
-  // gameplay loop, so behavior models remain unauthorized).
+  // Through A3 no persona may claim a behavior model (scope guard, CLAUDE.md
+  // §7; A3 authorizes the event-lifecycle skeleton only — no gameplay loop,
+  // so behavior models remain unauthorized).
   problem(
-    `persona matrix: ${personasWithBehavior.map((p) => p.id).join(", ")} declare behavior models — not authorized at M0/A0/A1/A2`,
+    `persona matrix: ${personasWithBehavior.map((p) => p.id).join(", ")} declare behavior models — not authorized at M0/A0/A1/A2/A3`,
   );
 } else {
   console.log(`ok    persona matrix declared (hooks only, no behavior models): ${personaIds.join(" · ")}`);
@@ -257,7 +258,7 @@ const registryCounts = Object.fromEntries(
 
 const report: HarnessReport = {
   harness: "harbor-guardians sim-harness",
-  milestone: "A2",
+  milestone: "A3",
   seed,
   registry_counts: registryCounts,
   total_invariants: INVARIANT_REGISTRY.length,
@@ -276,7 +277,7 @@ const implementedIds = batch.invariant_results.filter((r) => r.outcome === "PASS
 const stubTotal = batch.invariant_results.filter((r) => r.outcome === "STUB_FAIL_LOUD_VERIFIED").length;
 console.log(
   batchGreen
-    ? `\nA2 BATCH GREEN — ${INVARIANT_REGISTRY.length} invariants registered: ${stubTotal} fail-loud stubs (no unimplemented invariant is claimed as passing) + ${implementedIds.length} implemented and proven green (${implementedIds.join(", ") || "none"}); seed gate + determinism proof passed (seed ${seed}).`
-    : `\nA2 BATCH RED — see failures above (seed ${seed}).`,
+    ? `\nA3 BATCH GREEN — ${INVARIANT_REGISTRY.length} invariants registered: ${stubTotal} fail-loud stubs (no unimplemented invariant is claimed as passing) + ${implementedIds.length} implemented and proven green (${implementedIds.join(", ") || "none"}); seed gate + determinism proof passed (seed ${seed}).`
+    : `\nA3 BATCH RED — see failures above (seed ${seed}).`,
 );
 process.exit(batchGreen ? 0 : 1);

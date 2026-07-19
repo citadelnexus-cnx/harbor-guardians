@@ -1,0 +1,50 @@
+{
+  "schema_version": "0.1.0",
+  "event": {
+    "event_id": "fix.event.stormfront",
+    "class": "world",
+    "triggers": [
+      {
+        "kind": "event_resolved",
+        "event_id": "fix.expedition.tidewatch"
+      },
+      {
+        "kind": "harbor_resource_at_least",
+        "resource": "Iron",
+        "band": "total",
+        "amount": 100
+      }
+    ],
+    "offer_window": {
+      "kind": "imposed"
+    },
+    "objectives": [
+      {
+        "objective_id": "obj.weather_the_storm"
+      }
+    ],
+    "outcomes": [
+      {
+        "outcome_id": "out.endured",
+        "effects": [
+          {
+            "effect_id": "fx.threat_note",
+            "binds_to": "threat_director"
+          }
+        ]
+      }
+    ],
+    "chain_next": null,
+    "invariant_refs": ["EVT1", "EVT2", "EVT3", "EVT4"]
+  },
+  "value_metadata": [
+    {
+      "id": "fix.event.stormfront.trigger.iron_total",
+      "path": "event.triggers[1].amount",
+      "unit": "flat",
+      "gate": "test_fixture_only",
+      "source_doc_section": "15_EVENT_SYSTEM_SPEC v0.2 §3 (Condition — observable state); ALPHA_A3_EXECUTION_BRIEF v0.1 §1 (test fixtures only, A1 harbor observable)",
+      "invariant_refs": ["EVT1", "EVT4", "DC4"]
+    }
+  ]
+}

@@ -22,6 +22,9 @@ export const RESOURCE_STORAGE_SCHEMA_FILE = "schema/resource_storage_seed.schema
 export const CLAIM_LEDGER_RULES_SCHEMA_ID = "hg.claim_ledger_rules_seed";
 export const CLAIM_LEDGER_RULES_SCHEMA_FILE = "schema/claim_ledger_rules_seed.schema.json";
 
+export const EVENT_FIXTURE_SCHEMA_ID = "hg.event_fixture_seed";
+export const EVENT_FIXTURE_SCHEMA_FILE = "schema/event_fixture_seed.schema.json";
+
 function generateFrom(sourcePath, typeName, schemaId) {
   const generator = createGenerator({
     tsconfig: "tsconfig.json",
@@ -64,12 +67,23 @@ export function buildClaimLedgerRulesSeedSchema() {
   return generateFrom("src/contracts/claim-ledger-rules.ts", "ClaimLedgerRulesSeed", CLAIM_LEDGER_RULES_SCHEMA_ID);
 }
 
+/**
+ * event_fixture_seed schema (Doc 15 §3 at A3 Option A scope; A3 brief §1) —
+ * validates the TEST-ONLY event fixtures under tests/fixtures/events/.
+ * Deliberately NOT a /data seed set: no runtime event content exists and the
+ * validate-data.mjs SEED_SETS discovery path is untouched (A3 brief §2).
+ */
+export function buildEventFixtureSeedSchema() {
+  return generateFrom("src/contracts/event.ts", "EventFixtureSeed", EVENT_FIXTURE_SCHEMA_ID);
+}
+
 /** Every generated schema, one entry per /schema output file (drift-guarded in validate-data.mjs). */
 export const SCHEMA_BUILDS = [
   { file: SCHEMA_FILE, build: buildGuardianKitSeedSchema },
   { file: SAVE_BLOB_SCHEMA_FILE, build: buildSaveBlobSchema },
   { file: RESOURCE_STORAGE_SCHEMA_FILE, build: buildResourceStorageSeedSchema },
   { file: CLAIM_LEDGER_RULES_SCHEMA_FILE, build: buildClaimLedgerRulesSeedSchema },
+  { file: EVENT_FIXTURE_SCHEMA_FILE, build: buildEventFixtureSeedSchema },
 ];
 
 export function serializeSchema(schema) {

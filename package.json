@@ -17,6 +17,7 @@
     "test:save": "tsx --test tests/save-load.test.ts",
     "test:harbor": "tsx --test tests/harbor-state.test.ts",
     "test:ledger": "tsx --test tests/claim-ledger.test.ts",
+    "test:events": "tsx --test tests/event-lifecycle.test.ts",
     "tauri": "tauri"
   },
   "devDependencies": {
