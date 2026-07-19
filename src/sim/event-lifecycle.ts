@@ -49,6 +49,7 @@
 
 import type {
   Condition,
+  Effect,
   Event,
   EventInstance,
   EventLifecycleState,
@@ -168,6 +169,25 @@ export function createEventInstance(event: Event, instanceId: string): EventInst
   };
 }
 
+/**
+ * Deterministic structural fingerprint of one effect descriptor: every own
+ * key, sorted, with its value — so the staged-vs-declared comparison covers
+ * ALL authorized descriptor fields (currently effect_id AND binds_to), not
+ * just the id. Any changed, added, or removed field alters the fingerprint.
+ */
+function descriptorFingerprint(effect: Effect): string {
+  const record = effect as unknown as Record<string, unknown>;
+  return Object.keys(record)
+    .sort()
+    .map((key) => `${key}=${String(record[key])}`)
+    .join("|");
+}
+
+/** Ordered structural fingerprint of a descriptor list (order is significant — verbatim preservation, EVT3). */
+function descriptorSequence(effects: readonly Effect[]): string {
+  return effects.map(descriptorFingerprint).join(";");
+}
+
 /** Assert an instance is shape-valid against its defining event (used by tests/harness and after load). */
 export function assertEventInstanceValid(event: Event, instance: EventInstance): void {
   assertEventValid(event);
@@ -187,11 +207,17 @@ export function assertEventInstanceValid(event: Event, instance: EventInstance):
         `instance "${instance.instance_id}" selected unknown outcome "${instance.selected_outcome_id}"`,
       );
     }
-    const staged = instance.staged_effects.map((e) => e.effect_id).join(",");
-    const declared = outcome.effects.map((e) => e.effect_id).join(",");
+    // Full ordered structural comparison: every authorized descriptor field
+    // (effect_id AND binds_to) must match the declared outcome effects
+    // verbatim and in order. Catches an added, removed, reordered, or
+    // structurally altered descriptor — including a same-effect_id descriptor
+    // whose binds_to was changed (EVT3, staged descriptors are inert and
+    // preserved exactly; they are never executed).
+    const staged = descriptorSequence(instance.staged_effects);
+    const declared = descriptorSequence(outcome.effects);
     if (staged !== declared) {
       throw new EventLifecycleInvariantError(
-        `instance "${instance.instance_id}" staged effects [${staged}] differ from outcome "${outcome.outcome_id}" effects [${declared}] — staged descriptors must be preserved verbatim (EVT3)`,
+        `instance "${instance.instance_id}" staged effects [${staged}] differ from outcome "${outcome.outcome_id}" effects [${declared}] — staged descriptors must be preserved verbatim, ordered, with every field intact (EVT3)`,
       );
     }
   } else {

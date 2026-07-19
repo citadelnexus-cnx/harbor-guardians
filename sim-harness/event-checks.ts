@@ -38,7 +38,7 @@ import { canonicalSerialize } from "../src/save/canonical-json.js";
 import { loadSave, saveAtomically } from "../src/save/atomic-save.js";
 import { createEmptySaveBlob } from "../src/save/empty-save.js";
 import { SimulatedCrashError } from "../src/save/proofs.js";
-import type { SaveBlobValidator } from "../src/save/save-blob-validator.js";
+import { SaveIdentityError, type SaveBlobValidator } from "../src/save/save-blob-validator.js";
 import { numericLeafPaths, resolvePath } from "./data-contract-checks.js";
 import {
   BROKEN_EVENT_FIXTURE_PATH,
@@ -332,6 +332,68 @@ export function checkEvt3SaveAtomicLifecycle(validate: SaveBlobValidator): Check
     if (canonicalSerialize(reloaded.claim_ledger) !== canonicalSerialize(blob.claim_ledger)) {
       return fail("EVT3: the claim_ledger block changed — an effect executed, which is FUTURE BUILD (EVT5)");
     }
+
+    // Descriptor integrity: a same-effect_id descriptor whose binds_to is
+    // altered (id unchanged) must be rejected — staged descriptors are
+    // preserved verbatim with every field intact, not merely by id.
+    const firstStaged = persisted.staged_effects[0];
+    if (!firstStaged) {
+      return fail("EVT3: the mid-flight fixture staged no effect — descriptor-integrity probe would be vacuous");
+    }
+    const altBinding = firstStaged.binds_to === "claim_ledger" ? "threat_director" : "claim_ledger";
+    const bindingMutated: EventInstance = {
+      ...persisted,
+      staged_effects: persisted.staged_effects.map((e, i) =>
+        i === 0 ? { ...e, binds_to: altBinding } : { ...e },
+      ),
+    };
+    let bindingRejected = false;
+    try {
+      assertEventInstanceValid(choice, bindingMutated);
+    } catch (err) {
+      bindingRejected = err instanceof EventLifecycleInvariantError;
+    }
+    if (!bindingRejected) {
+      return fail("EVT3: a staged descriptor with an unchanged effect_id but altered binds_to was NOT rejected");
+    }
+
+    // Persisted-identity integrity, enforced in the REAL save path (the same
+    // validator saveAtomically and loadSave use): duplicate and empty
+    // instance_id are rejected; distinct ids sharing an event_id are accepted.
+    const dupId: EventInstance = { ...dormant, instance_id: "evt3.midflight" };
+    let dupRejected = false;
+    try {
+      saveAtomically(join(dir, "evt3.dup.json"), { ...loadedA, events: [persisted, dupId] }, { validate });
+    } catch (err) {
+      dupRejected = err instanceof SaveIdentityError;
+    }
+    if (!dupRejected) {
+      return fail("EVT3: a save with duplicate persisted instance_id was NOT rejected by the real save path");
+    }
+
+    const emptyId: EventInstance = { ...dormant, instance_id: "" };
+    let emptyRejected = false;
+    try {
+      saveAtomically(join(dir, "evt3.empty.json"), { ...loadedA, events: [emptyId] }, { validate });
+    } catch (err) {
+      emptyRejected = err instanceof SaveIdentityError;
+    }
+    if (!emptyRejected) {
+      return fail("EVT3: a save with an empty persisted instance_id was NOT rejected by the real save path");
+    }
+
+    // Two DISTINCT instances of the SAME event_id are a valid collection.
+    const twinA = createEventInstance(choice, "evt3.twin.a");
+    const twinB = createEventInstance(choice, "evt3.twin.b");
+    if (twinA.event_id !== twinB.event_id) {
+      return fail("EVT3: twin setup broken — both instances must share an event_id");
+    }
+    const twinSlot = join(dir, "evt3.twins.json");
+    saveAtomically(twinSlot, { ...loadedA, events: [twinA, twinB] }, { validate });
+    const twinsLoaded = loadSave(twinSlot, validate);
+    if (twinsLoaded.events.length !== [twinA, twinB].length) {
+      return fail("EVT3: distinct instances sharing an event_id were not both preserved — identity guard over-rejected");
+    }
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }
@@ -341,8 +403,11 @@ export function checkEvt3SaveAtomicLifecycle(validate: SaveBlobValidator): Check
       `events block byte-identically; repeated load cannot duplicate it; a simulated pre-commit crash left the ` +
       `prior mid-flight state intact and loadable (S7 pattern); resumption advanced exactly once to RESOLVED; the ` +
       `reloaded terminal instance rejects every further signal (no resolution replay); staged descriptors were ` +
-      `neither executed, duplicated, nor dropped — the claim_ledger block is untouched. This proves lifecycle ` +
-      `persistence only; reward delivery and effect application remain FUTURE BUILD (EVT5+ fail-loud).`,
+      `neither executed, duplicated, nor dropped — the claim_ledger block is untouched. Descriptor integrity: a ` +
+      `same-effect_id/changed-binds_to mutation is rejected (full-field, ordered comparison). Persisted identity: ` +
+      `the real save path rejects duplicate and empty instance_id and accepts distinct instances sharing an ` +
+      `event_id. This proves lifecycle persistence only; reward delivery and effect application remain FUTURE ` +
+      `BUILD (EVT5+ fail-loud).`,
   );
 }
 

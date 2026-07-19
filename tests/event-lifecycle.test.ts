@@ -19,7 +19,7 @@
  */
 
 import { strict as assert } from "node:assert";
-import { mkdtempSync, readFileSync, rmSync } from "node:fs";
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { test } from "node:test";
@@ -42,7 +42,7 @@ import { createHarborState, withdraw } from "../src/sim/harbor-state.js";
 import { canonicalSerialize } from "../src/save/canonical-json.js";
 import { loadSave, saveAtomically } from "../src/save/atomic-save.js";
 import { createEmptySaveBlob } from "../src/save/empty-save.js";
-import { createSaveBlobValidator } from "../src/save/save-blob-validator.js";
+import { createSaveBlobValidator, SaveIdentityError } from "../src/save/save-blob-validator.js";
 import {
   BROKEN_EVENT_FIXTURE_PATH,
   CHOICE_EVENT_FIXTURE_PATH,
@@ -279,7 +279,7 @@ test("EVT3: mid-flight instance persists through the real save path and resumes 
   });
 });
 
-test("EVT3 boundary: a save carrying an instance with tampered staged effects is caught by instance validation", () => {
+test("EVT3 boundary: a save carrying an instance with an ADDED staged effect is caught by instance validation", () => {
   const midFlight = drive(choice, createEventInstance(choice, "t.tamper"), [
     { kind: "evaluate", observed: met() },
     { kind: "present" },
@@ -288,4 +288,69 @@ test("EVT3 boundary: a save carrying an instance with tampered staged effects is
   ]);
   const tampered: EventInstance = { ...midFlight, staged_effects: [...midFlight.staged_effects, { effect_id: "fx.smuggled", binds_to: "claim_ledger" }] };
   assert.throws(() => assertEventInstanceValid(choice, tampered), EventLifecycleInvariantError);
+});
+
+test("EVT3 descriptor integrity: a staged effect with an UNCHANGED effect_id but altered binds_to is rejected", () => {
+  const midFlight = drive(choice, createEventInstance(choice, "t.bindingtamper"), [
+    { kind: "evaluate", observed: met() },
+    { kind: "present" },
+    { kind: "accept" },
+    { kind: "complete", outcome_id: "out.success" },
+  ]);
+  const original = midFlight.staged_effects[0]!;
+  assert.equal(original.effect_id, "fx.reward_note");
+  assert.equal(original.binds_to, "claim_ledger", "fixture precondition: original binding is claim_ledger");
+  // Same effect_id, different binds_to — id-only comparison would MISS this.
+  const bindingMutated: EventInstance = {
+    ...midFlight,
+    staged_effects: [{ effect_id: original.effect_id, binds_to: "threat_director" }],
+  };
+  assert.throws(() => assertEventInstanceValid(choice, bindingMutated), EventLifecycleInvariantError);
+  // A reordered-but-same-set descriptor list would also be caught (order is significant);
+  // and the untampered instance still validates.
+  assert.doesNotThrow(() => assertEventInstanceValid(choice, midFlight));
+});
+
+// ── Persisted-events identity integrity (EVT3, real save path) ───────────────
+
+test("EVT3 identity: a v3 save with an empty instance_id is rejected by the real save path", () => {
+  withTempDir((dir) => {
+    const bad: EventInstance = { ...createEventInstance(choice, "placeholder"), instance_id: "" };
+    const blob = { ...createEmptySaveBlob({ game_version: "0.0.0", last_saved_utc: "2026-01-01T00:00:00.000Z" }), events: [bad] };
+    assert.throws(() => saveAtomically(join(dir, "empty-id.save.json"), blob, { validate }), SaveIdentityError);
+  });
+});
+
+test("EVT3 identity: a v3 save with two event records sharing one instance_id is rejected", () => {
+  withTempDir((dir) => {
+    const a = createEventInstance(choice, "dup.id");
+    const b = { ...createEventInstance(imposed, "dup.id") };
+    const blob = { ...createEmptySaveBlob({ game_version: "0.0.0", last_saved_utc: "2026-01-01T00:00:00.000Z" }), events: [a, b] };
+    assert.throws(() => saveAtomically(join(dir, "dup-id.save.json"), blob, { validate }), SaveIdentityError);
+  });
+});
+
+test("EVT3 identity: two records with distinct instance_ids but the same event_id remain valid and round-trip", () => {
+  withTempDir((dir) => {
+    const slot = join(dir, "twins.save.json");
+    const a = createEventInstance(choice, "twin.a");
+    const b = createEventInstance(choice, "twin.b");
+    assert.equal(a.event_id, b.event_id, "both reference the same event_id");
+    const blob = { ...createEmptySaveBlob({ game_version: "0.0.0", last_saved_utc: "2026-01-01T00:00:00.000Z" }), events: [a, b] };
+    assert.doesNotThrow(() => saveAtomically(slot, blob, { validate }));
+    const loaded = loadSave(slot, validate);
+    assert.equal(loaded.events.length, 2, "both distinct instances preserved — identity guard does not over-reject shared event_id");
+  });
+});
+
+test("EVT3 identity: the guard is enforced on LOAD too (a duplicate-id save cannot be read back)", () => {
+  withTempDir((dir) => {
+    // Bypass saveAtomically's validation to plant a duplicate-id file directly, then prove loadSave rejects it.
+    const slot = join(dir, "planted.save.json");
+    const a = createEventInstance(choice, "same");
+    const b = createEventInstance(imposed, "same");
+    const blob = { ...createEmptySaveBlob({ game_version: "0.0.0", last_saved_utc: "2026-01-01T00:00:00.000Z" }), events: [a, b] };
+    writeFileSync(slot, canonicalSerialize(blob), "utf8");
+    assert.throws(() => loadSave(slot, validate), SaveIdentityError);
+  });
 });
