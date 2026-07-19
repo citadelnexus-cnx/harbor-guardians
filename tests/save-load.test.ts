@@ -38,6 +38,7 @@ import { loadStorageSeed } from "../sim-harness/storage-seed.js";
 
 const validate = createSaveBlobValidator();
 const V1_FIXTURE_PATH = "tests/fixtures/save.v1.json";
+const V2_FIXTURE_PATH = "tests/fixtures/save.v2.json";
 
 function withTempDir(run: (dir: string) => void): void {
   const dir = mkdtempSync(join(tmpdir(), "hg-saveload-test-"));
@@ -171,6 +172,57 @@ test("migration: a v1 save claiming pending-reward content (impossible under the
   const v1 = JSON.parse(readFileSync(V1_FIXTURE_PATH, "utf8")) as Record<string, unknown>;
   const poisoned = { ...v1, pending_reward_resolution: [{ smuggled: true }] };
   assert.throws(() => migrateSaveBlobToCurrent(poisoned), SaveMigrationError);
+});
+
+// ── Save-schema migration v2 → v3 (Save/Load §14; A3 bump) ──────────────────
+
+test("migration: committed v2 fixture (with real A2 ledger content) migrates to v3 preserving every block exactly", () => {
+  withTempDir((dir) => {
+    const slot = join(dir, "migrated-v2.save.json");
+    copyFileSync(V2_FIXTURE_PATH, slot);
+    const fixtureBytes = readFileSync(slot, "utf8");
+    const fixture = JSON.parse(fixtureBytes) as Record<string, unknown>;
+
+    const loaded = loadSave(slot, validate);
+    assert.equal(loaded.meta.save_schema_version, SAVE_SCHEMA_VERSION, "migrated save carries the current version");
+    assert.deepEqual(loaded.events, [], "the new events block starts empty — nothing invented");
+
+    // Every A2 block passes through byte-preserved: no player value transformed, created, or lost.
+    for (const block of ["resources", "claim_ledger", "pending_reward_resolution", "world_clock", "threat"] as const) {
+      assert.equal(
+        canonicalSerialize(loaded[block]),
+        canonicalSerialize(fixture[block]),
+        `${block} preserved exactly through v2→v3`,
+      );
+    }
+    assert.equal(loaded.claim_ledger.packages.length, 1, "ledger package survived");
+    assert.equal(loaded.claim_ledger.story_claims.length, 1, "story claim survived (L5)");
+    assert.equal(loaded.pending_reward_resolution.length, 1, "pending record survived (L14)");
+
+    // Loading never mutates the on-disk v2 file; re-saving commits the migrated state atomically.
+    assert.equal(readFileSync(slot, "utf8"), fixtureBytes, "load leaves the v2 file untouched");
+    saveAtomically(slot, loaded, { validate });
+    assert.equal(canonicalSerialize(loadSave(slot, validate)), canonicalSerialize(loaded), "re-saved migrated state round-trips");
+  });
+});
+
+test("migration: the v1 fixture chains v1→v2→v3 and equals a fresh current-version equivalent", () => {
+  withTempDir((dir) => {
+    const slot = join(dir, "chained.save.json");
+    copyFileSync(V1_FIXTURE_PATH, slot);
+    const loaded = loadSave(slot, validate);
+    assert.equal(loaded.meta.save_schema_version, SAVE_SCHEMA_VERSION);
+    assert.deepEqual(loaded.claim_ledger, { packages: [], story_claims: [] });
+    assert.deepEqual(loaded.events, []);
+  });
+});
+
+test("migration: a 'v2' save already carrying an events block (impossible under the v2 schema) is refused", () => {
+  const v2 = JSON.parse(readFileSync(V2_FIXTURE_PATH, "utf8")) as Record<string, unknown>;
+  const poisoned = { ...v2, events: [{ smuggled: true }] };
+  assert.throws(() => migrateSaveBlobToCurrent(poisoned), SaveMigrationError);
+  const poisonedEmpty = { ...v2, events: [] };
+  assert.throws(() => migrateSaveBlobToCurrent(poisonedEmpty), SaveMigrationError, "even an empty pre-existing events key is impossible under v2");
 });
 
 test("migration: malformed saves are refused (no meta, non-integer version)", () => {

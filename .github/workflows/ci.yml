@@ -54,7 +54,7 @@ jobs:
       - name: Sim-harness smoke (headless, fixed seeds)
         run: pnpm run sim:harness
 
-      - name: Save/load tests (S7 atomic save + S5 empty/stocked/ledger round-trips + v1→v2 migration)
+      - name: Save/load tests (S7 atomic save + S5 empty/stocked/ledger round-trips + v1→v2→v3 migrations)
         run: pnpm run test:save
 
       - name: Harbor-state tests (A1 resource spine — 3S separation, hard stop, no hidden loss, DC6)
@@ -62,6 +62,9 @@ jobs:
 
       - name: Claim-ledger tests (A2 reward routing — slot caps, partial claim, pending, story protection)
         run: pnpm run test:ledger
+
+      - name: Event-lifecycle tests (A3 skeleton — transitions, determinism, EVT3 persistence, inert effects)
+        run: pnpm run test:events
 
       - name: Rust toolchain versions (runner-preinstalled stable/MSVC)
         run: |

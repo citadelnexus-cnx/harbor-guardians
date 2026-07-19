@@ -17,10 +17,15 @@
  * exists), S5 extended with the reward-bearing ledger round-trip, and S7
  * upgraded to crash-simulate over reward-bearing saves (the M0 "reward-
  * duplication portion is future" limitation is closed at A2 scope).
+ * Implemented at Alpha A3 Option A (owner A3 authorization 2026-07-18 —
+ * Expedition and Event Skeleton, lifecycle mechanics only): EVT1, EVT2,
+ * EVT3, EVT4 at A3 scope (checks in event-checks.ts — test fixtures only,
+ * no real event content, no effect execution, no event reward source; the
+ * A2 test_supplied boundary is unchanged).
  * Everything else remains a fail-loud stub — every remaining invariant binds
- * to a system that does not exist at A2 (production, offline, raids, cargo,
- * inbox, grants, events), and converting any of them would claim untested
- * capability.
+ * to a system that does not exist at A3 (production, offline, raids, cargo,
+ * inbox, grants, event reward delivery/chains), and converting any of them
+ * would claim untested capability.
  *
  * Governing docs (statements condensed from, and audited against):
  *   - SIM_HARNESS_ACCEPTANCE_SPEC v0.6.2 §4.1–§4.8 (E, L, M, C, CARGO, S, OPS, UX1)
@@ -56,6 +61,12 @@ import {
   checkDc5ValidationGate,
   checkDc6CoreResourceOnly,
 } from "./data-contract-checks.js";
+import {
+  checkEvt1PureDataEvents,
+  checkEvt2DeterministicTransitions,
+  checkEvt3SaveAtomicLifecycle,
+  checkEvt4ObservableConditions,
+} from "./event-checks.js";
 import {
   checkL1TransferOnly,
   checkL5StoryClaimsProtected,
@@ -393,12 +404,43 @@ export const INVARIANT_REGISTRY: readonly InvariantEntry[] = [
   stub("GDN11", "GDN", "Guardian kits cannot create new resource sources; any reward modifier attaches to an existing approved event/source and stays within the sidegrade budget — no kit is a hidden faucet.", "12_GUARDIAN_SANCTUM_AND_KIT_FOUNDATION v0.1.2 §9"),
 
   // ── Event System (EVT1–EVT10) — 15_EVENT_SYSTEM_SPEC v0.2 §5 ──────────────
-  // Registered at Alpha A0 (owner authorization 2026-07-15) as fail-loud stubs
-  // only. No event lifecycle logic exists; none is authorized before A1.
-  stub("EVT1", "EVT", "Every event is pure data validated against schema; no event hard-codes gameplay numbers.", "15_EVENT_SYSTEM_SPEC v0.2 §5"),
-  stub("EVT2", "EVT", "The lifecycle state machine is deterministic: same state + seed ⇒ same transition.", "15_EVENT_SYSTEM_SPEC v0.2 §5"),
-  stub("EVT3", "EVT", "Events are save-atomic: an event mid-flight persists and resumes exactly once; never duplicates or drops effects across save/load (S7).", "15_EVENT_SYSTEM_SPEC v0.2 §5"),
-  stub("EVT4", "EVT", "Trigger conditions reference only observable state; no hidden-information gating (player-trust / OB5).", "15_EVENT_SYSTEM_SPEC v0.2 §5"),
+  // Registered at Alpha A0 (owner authorization 2026-07-15) as fail-loud
+  // stubs. EVT1–EVT4 converted stub → implemented at Alpha A3 Option A
+  // (owner authorization 2026-07-18); checks in event-checks.ts, exercising
+  // the lifecycle skeleton over test fixtures only. EVT5–EVT10 stay
+  // fail-loud, each for a concrete reason (A3 brief §2): EVT5 (event reward
+  // delivery) is a deliberately deferred capability increment; EVT6 has no
+  // economy loop; EVT7/EVT8 depend on Inbox/Cargo/Threat systems that don't
+  // exist; EVT9 needs the Threat & Raid Director in code; EVT10 ships with
+  // real event content authoring.
+  implemented(
+    "EVT1",
+    "EVT",
+    "Every event is pure data validated against schema; no event hard-codes gameplay numbers.",
+    "15_EVENT_SYSTEM_SPEC v0.2 §5 (A3 Option A scope: test fixtures only — no real event content exists)",
+    () => checkEvt1PureDataEvents(),
+  ),
+  implemented(
+    "EVT2",
+    "EVT",
+    "The lifecycle state machine is deterministic: same state + seed ⇒ same transition.",
+    "15_EVENT_SYSTEM_SPEC v0.2 §5 + §2 (A3: signal-driven transitions; no RNG/clock exists in the lifecycle at all)",
+    () => checkEvt2DeterministicTransitions(),
+  ),
+  implemented(
+    "EVT3",
+    "EVT",
+    "Events are save-atomic: an event mid-flight persists and resumes exactly once; never duplicates or drops effects across save/load (S7).",
+    "15_EVENT_SYSTEM_SPEC v0.2 §5 (A3 scope: lifecycle persistence + inert staged descriptors via SaveBlob v3; effect APPLICATION is FUTURE BUILD — EVT5+)",
+    () => checkEvt3SaveAtomicLifecycle(getSaveBlobValidator()),
+  ),
+  implemented(
+    "EVT4",
+    "EVT",
+    "Trigger conditions reference only observable state; no hidden-information gating (player-trust / OB5).",
+    "15_EVENT_SYSTEM_SPEC v0.2 §5 (A3 scope: A1 harbor bands + A2 ledger occupancy + prior-event completion; other systems are schema-unrepresentable)",
+    () => checkEvt4ObservableConditions(),
+  ),
   stub("EVT5", "EVT", "Every reward effect routes through the Claim Ledger; no event grants resources ambiently (L-suite).", "15_EVENT_SYSTEM_SPEC v0.2 §5"),
   stub("EVT6", "EVT", "No event creates a new resource source; economy effects bind to an existing source/sink/event_id (E15/GDN11).", "15_EVENT_SYSTEM_SPEC v0.2 §5"),
   stub("EVT7", "EVT", "Expiry/decline is fair: the player was warned within a foreseeable window before any loss (D35/D32).", "15_EVENT_SYSTEM_SPEC v0.2 §5"),

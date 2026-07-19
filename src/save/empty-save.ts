@@ -44,6 +44,7 @@ export function createEmptySaveBlob(args: EmptySaveArgs): SaveBlob {
     threat: { phase: "calm" },
     claim_ledger: { packages: [], story_claims: [] },
     pending_reward_resolution: [],
+    events: [],
     system_messages: [],
     merit: {},
     guardian_bond: null,

@@ -92,7 +92,8 @@ export function checkDc1NoMagicNumbers(): CheckVerdict {
 
 // ── DC4 — unit-requirement metadata ─────────────────────────────────────────
 
-function numericLeafPaths(node: unknown, prefix: string): string[] {
+/** Walk every numeric leaf under a payload root (shared with the EVT1 fixture-metadata check). */
+export function numericLeafPaths(node: unknown, prefix: string): string[] {
   if (typeof node === "number") return [prefix];
   const paths: string[] = [];
   if (Array.isArray(node)) {
@@ -105,7 +106,8 @@ function numericLeafPaths(node: unknown, prefix: string): string[] {
   return paths;
 }
 
-function resolvePath(root: unknown, path: string): unknown {
+/** Resolve a numericLeafPaths-style dot/bracket path (shared with the EVT1 fixture-metadata check). */
+export function resolvePath(root: unknown, path: string): unknown {
   return path
     .split(".")
     .flatMap((seg) => seg.split(/[[\]]/).filter(Boolean))
@@ -266,7 +268,7 @@ export function checkDc6CoreResourceOnly(): CheckVerdict {
   );
 }
 
-/** A structurally valid empty save blob shape for the DC6 save-schema probe (matches createEmptySaveBlob, v2). */
+/** A structurally valid empty save blob shape for the DC6 save-schema probe (matches createEmptySaveBlob, v3). */
 function minimalValidSaveShape(): Record<string, unknown> {
   const emptyBand = { safe: 0, exposed: 0 };
   return {
@@ -278,6 +280,7 @@ function minimalValidSaveShape(): Record<string, unknown> {
     threat: { phase: "calm" },
     claim_ledger: { packages: [], story_claims: [] },
     pending_reward_resolution: [],
+    events: [],
     system_messages: [],
     merit: {},
     guardian_bond: null,

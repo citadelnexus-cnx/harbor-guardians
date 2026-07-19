@@ -1,4 +1,4 @@
-# /sim-harness — claim-to-test QA spine (M0 skeleton + A0 EVT registration + A1 data-contract checks + A2 claim-ledger checks)
+# /sim-harness — claim-to-test QA spine (M0 skeleton + A0 EVT registration + A1 data-contract checks + A2 claim-ledger checks + A3 event-lifecycle checks)
 
 **One responsibility:** the headless CLI runner over the pure sim core (`/src/sim`) —
 persona matrix plus the claim-to-test invariant suites. QA per [`AGENTS.md`](../AGENTS.md):
@@ -8,7 +8,7 @@ Governing docs: [`SIM_HARNESS_ACCEPTANCE_SPEC v0.6.2`](../docs/foundation/SIM_HA
 (architecture §2, persona matrix §3, suites §4, report §5, gates §7, evidence §8);
 M0 packet §8; [`CLAUDE.md`](../CLAUDE.md) §3 (claim-to-test).
 
-## A2 state — registry + fail-loud stubs + honest conversions
+## A3 state — registry + fail-loud stubs + honest conversions
 
 **No gameplay loop exists.** What exists:
 
@@ -19,9 +19,8 @@ M0 packet §8; [`CLAUDE.md`](../CLAUDE.md) §3 (claim-to-test).
   FCT1–FCT8 · GDN1–GDN11 · EVT1–EVT10.
   **EVT1–EVT10** were registered at **Alpha A0** (owner A0 authorization,
   2026-07-15) from [`15_EVENT_SYSTEM_SPEC v0.2 §5`](../docs/pre-alpha/15_EVENT_SYSTEM_SPEC_v0.2.md)
-  as fail-loud stubs only — **no event lifecycle logic exists**; A0 authorizes
-  planning + harness preparation, not gameplay (see
-  [`docs/alpha/`](../docs/alpha/README.md)).
+  as fail-loud stubs (see [`docs/alpha/`](../docs/alpha/README.md));
+  **EVT1–EVT4** were converted to implemented at Alpha A3 (below).
   **Implemented (M0 Step 7):** S5 + S7 at empty-shell scope (Sim §7 M0 exit
   gate), backed by the save/load proofs in
   [`src/save/proofs.ts`](../src/save/proofs.ts).
@@ -40,6 +39,15 @@ M0 packet §8; [`CLAUDE.md`](../CLAUDE.md) §3 (claim-to-test).
   **test-supplied packages only** (no gameplay reward source exists); S5
   extended with the reward-bearing ledger round-trip and S7 upgraded to
   crash-simulate over reward-bearing saves.
+  **Implemented (Alpha A3 Option A, owner authorization 2026-07-18):** EVT1,
+  EVT2, EVT3, EVT4 ([`event-checks.ts`](event-checks.ts)) at A3 scope — pure
+  schema-validated event fixtures (`tests/fixtures/events/`), deterministic
+  signal-driven lifecycle transitions, mid-flight save/load persistence via
+  the SaveBlob v3 `events` block (EVT3, reusing the S7 pipeline), and
+  observable-state triggers bound to the A1 harbor + A2 ledger state — over
+  **test fixtures only** (no real event content, no effect execution, no
+  event reward source; the A2 `test_supplied` boundary is unchanged).
+  EVT5–EVT10 stay fail-loud.
   Every other ID is a fail-loud stub: executing it **throws**
   (`InvariantStubError`) — "claimed but untested" is impossible. A feature PR
   turns its stub(s) green by replacing the check body, flipping `status` to
@@ -68,9 +76,9 @@ pnpm run sim:harness -- --invariant E2  # execute one invariant for real
 `--invariant <ID>` **exits 1 for every stub ID** — that is the point: an
 invariant stays a fail-loud stub until its feature is implemented and proven
 (S5/S7 exit 0 since M0 Step 7; DC1/DC4/DC5/DC6 exit 0 since Alpha A1;
-L1/L5/L6/L7/L11/L14 exit 0 since Alpha A2). The batch records stubs as
-`STUB_FAIL_LOUD_VERIFIED`, never `PASS` — at A2 that is 120 stubs + 12
-implemented.
+L1/L5/L6/L7/L11/L14 exit 0 since Alpha A2; EVT1/EVT2/EVT3/EVT4 exit 0 since
+Alpha A3). The batch records stubs as `STUB_FAIL_LOUD_VERIFIED`, never
+`PASS` — at A3 that is 116 stubs + 16 implemented.
 
 Batch reports are written to `sim-harness/reports/` (gitignored); they are
 evidence artifacts attached to PRs per Sim §8, not committed state.

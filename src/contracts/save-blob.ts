@@ -18,6 +18,14 @@
  *     v1 fixture + round-trip test (Save/Load §14). The §14 Migration Notice
  *     is FUTURE BUILD with the System Inbox itself (M6 remains fail-loud;
  *     no message system exists at A2).
+ *   - A3 (v3 — owner Alpha A3 authorization 2026-07-18, Option A): the
+ *     `events` block is added so mid-flight event-lifecycle instances
+ *     persist through the REAL save path (Doc 15 §2 "atomic across save";
+ *     EVT3). Save/Load §16 predates the event framework and lists no events
+ *     block; A3's authorization + the v2→v3 migration (committed v2 fixture
+ *     + round-trip test) are the recorded basis for adding it. Instances
+ *     carry lifecycle state and INERT staged-effect descriptors only — no
+ *     effect execution exists (EVT5+ fail-loud).
  *   - `combat_suspend?` (optional in §16) is deliberately absent until the
  *     D16/C8 combat-suspend feature lands; its migration adds it.
  *
@@ -39,14 +47,16 @@
 
 import type { ClaimLedgerState, PendingRewardResolution } from "./claim-ledger.js";
 import type { CoreResource, RaidPhase } from "./enums.js";
+import type { EventInstance } from "./event.js";
 
 /**
  * Current save schema version (infrastructure version, not a gameplay value).
  * Bumping it is a migration event: function + fixture + round-trip test
  * (Save/Load §14; the M6 Migration Notice is FUTURE BUILD with the inbox).
- * v1 = M0/A1 empty-ledger shell · v2 = A2 claim_ledger + pending blocks.
+ * v1 = M0/A1 empty-ledger shell · v2 = A2 claim_ledger + pending blocks ·
+ * v3 = A3 events block (lifecycle instances, inert effects).
  */
-export const SAVE_SCHEMA_VERSION = 2;
+export const SAVE_SCHEMA_VERSION = 3;
 
 /** Save/Load §1/§2: versions + absolute UTC timestamp (ISO-8601). */
 export interface SaveMeta {
@@ -106,6 +116,8 @@ export interface SaveBlob {
   claim_ledger: ClaimLedgerState;
   /** Persistent pending_reward_resolution records (Doc 04 §10; Save/Load §11; D19/L14) — real shape since A2 (v2). */
   pending_reward_resolution: PendingRewardResolution[];
+  /** Mid-flight event-lifecycle instances (Doc 15 §2; EVT3) — real shape since A3 (v3). Inert staged effects only; no effect execution exists. */
+  events: EventInstance[];
   /** system_message records (Save/Load §12, M8). */
   system_messages: EmptyListM0;
   /** Per-faction Merit standing (soulbound; never in 3S bands — DC6/FCT1). */
