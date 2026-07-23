@@ -2,7 +2,7 @@
 
 Alpha-phase planning documents. Governing rules: [`CLAUDE.md`](../../CLAUDE.md) §6/§7, [`AGENTS.md`](../../AGENTS.md).
 
-## Current authorization state (2026-07-19)
+## Current authorization state (2026-07-23)
 
 | Phase | Status |
 | --- | --- |
@@ -11,7 +11,8 @@ Alpha-phase planning documents. Governing rules: [`CLAUDE.md`](../../CLAUDE.md) 
 | **Alpha A1** — Minimal Harbor State and Resource Spine | CLOSED — owner authorization 2026-07-16; harbor spine + DC1/DC4/DC5/DC6 + stocked S5 (PR #15) |
 | **Alpha A2** — Claim Ledger and Reward Routing | CLOSED — owner authorization 2026-07-17; ledger spine + L1/L5/L6/L7/L11/L14 + save v1→v2 (PR #16) |
 | **Alpha A3** — Expedition and Event Skeleton (Option A: lifecycle mechanics only) | CLOSED — owner authorization 2026-07-18; EVT1–EVT4 + save v2→v3 + integrity corrections (PR #18) |
-| **Alpha A4+** | **NOT AUTHORIZED** — no scope, brief, or implementation permission exists |
+| **Alpha A4** — Bounded First Playable Expedition Loop (Option A only) | AUTHORIZED — owner authorization 2026-07-23; scope in [`ALPHA_A4_EXECUTION_BRIEF_v0.1.md`](ALPHA_A4_EXECUTION_BRIEF_v0.1.md); baseline `a08b4ad`. Implementation gated on merge of the authorization-record PR; not yet started |
+| **Alpha A5+** | **NOT AUTHORIZED** — no scope, brief, or implementation permission exists |
 
 ## Closed Alpha A3 boundary
 
@@ -28,11 +29,26 @@ Alpha A3 Option A delivered only the **Expedition and Event Skeleton lifecycle m
 
 PR #18 squash-merged to `main` as `245b73215cf9b098b8f54eaa559dabc1b49703d4`.
 
-## Current hard boundary
+## Authorized Alpha A4 boundary (Option A only)
 
-No implementation phase is currently authorized. Specifically, there is no authorization for EVT5+, event reward generation, event-to-Claim-Ledger delivery, any new Claim Ledger `source_type`, effect execution or dispatch, real event content, gameplay loop work, combat, raids, threat behavior, guardians, factions, cargo voyages, gear gameplay, Harbor Inbox/messages, gameplay UI, Tauri changes, deployment, production, or Alpha A4.
+On **2026-07-23** the owner authorized **Alpha A4 Option A — Bounded First Playable Expedition Loop** (public-safe scope in [`ALPHA_A4_EXECUTION_BRIEF_v0.1.md`](ALPHA_A4_EXECUTION_BRIEF_v0.1.md); baseline `a08b4ad`). A4 is bounded to exactly one canonical, repeatable, deterministic, save-safe early-game Harbor → route-anchor-outpost → Harbor loop, with:
 
-Any next phase requires a separate owner decision, a bounded execution brief, branch-first implementation, draft PR, review, and merge gate.
+- Theo's inherited salvage vessel and a fixed group (player, selected starting Guardian, Morra Dalmere, any approved fixed support character) — no selectable party, no formations.
+- A small deterministic supply set, one short route, bounded reuse of the existing EVT1–EVT4 lifecycle, one damaged route-anchor outpost, and a non-combat stabilization/salvage objective.
+- Outcomes: cancellation, full success, partial success, retreat, forced withdrawal/failure; then return, docking, review, and unloading.
+- Safe Storage transfer with unsafe Overflow capped at 3× current Safe Storage capacity; blocked-unloading preservation (no loss, no duplication).
+- **Only already-valid Claim Ledger routing** — no new `source_type`, no general expedition reward generation.
+- Bounded vessel/crew/Guardian recovery; a limited route-anchor operations unlock; repeatable expeditions; exact save/exit/relaunch/resume.
+- A minimal Alpha-quality Windows desktop interface; save v4 + deterministic v3→v4 migration **only if technically required** (assess v3 first).
+- Starting Guardians (Raxa, Tarin, Nova) as **equivalent sidegrades only** — no superior rewards, guaranteed success, leveling, evolution, equipment, combat powers, bond tree, or roster.
+
+Convert only fully proven A4-scoped invariants; everything else stays fail-loud. Implementation runs on branch `alpha/a4-first-playable-expedition-loop`, is **gated on the merge of the authorization-record PR** that lands the A4 brief and the CLAUDE.md §7 / README / progress-ledger amendments, ships as a draft PR only, and A4 closes only after owner-approved merge.
+
+## Still outside the boundary
+
+A4's hard exclusions (and Alpha A5 and later) remain NOT AUTHORIZED: combat; raids/theft activation; multiplayer/networking; fleet and full ship progression; crew recruitment and detailed crew systems; full Guardian progression; selectable party and battle formations; equipment and broad loot; full Cargo/Docked Cargo system; trading and markets; unrestricted Claim Ledger `source_type`s; general expedition reward generation; effect execution or dispatch beyond the bounded loop; full Harbor Inbox; full quest framework; Atlas/world traversal; factions; threat director; economy pulses; full city-builder departments; controller certification; deployment; production.
+
+Any phase beyond this A4 boundary requires a separate owner decision, a bounded execution brief, branch-first implementation, draft PR, review, and merge gate.
 
 ## Documents
 
@@ -42,3 +58,4 @@ Any next phase requires a separate owner decision, a bounded execution brief, br
 | [`ALPHA_A1_EXECUTION_BRIEF_v0.1.md`](ALPHA_A1_EXECUTION_BRIEF_v0.1.md) | The A1 scope, deliverables, hard limits, and exit condition (closed) |
 | [`ALPHA_A2_EXECUTION_BRIEF_v0.1.md`](ALPHA_A2_EXECUTION_BRIEF_v0.1.md) | The A2 scope, deliverables, hard limits, and exit condition (closed) |
 | [`ALPHA_A3_EXECUTION_BRIEF_v0.1.md`](ALPHA_A3_EXECUTION_BRIEF_v0.1.md) | The A3 Option A scope, deliverables, hard limits, and exit condition (closed) |
+| [`ALPHA_A4_EXECUTION_BRIEF_v0.1.md`](ALPHA_A4_EXECUTION_BRIEF_v0.1.md) | The A4 Option A scope, deliverables, hard limits, and exit condition (authorized; implementation gated on the authorization-record PR merge) |

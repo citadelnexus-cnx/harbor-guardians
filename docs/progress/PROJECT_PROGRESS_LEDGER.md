@@ -31,14 +31,15 @@ This document tracks phase progress and authorization state across the whole pro
 | Alpha A1 | CLOSED |
 | Alpha A2 | CLOSED |
 | Alpha A3 | CLOSED |
-| Alpha A4 | NOT AUTHORIZED |
+| Alpha A4 | AUTHORIZED — OPTION A ONLY (implementation not yet started) |
 | Alpha A5–A6 | FUTURE |
 | Beta | FUTURE |
 | Production | FUTURE |
-| Gameplay loop (any form) | NOT AUTHORIZED |
-| Event rewards / effect execution / real event content | NOT AUTHORIZED |
-| Combat / raids / guardians / factions / cargo voyages | NOT AUTHORIZED |
-| Gameplay UI | NOT AUTHORIZED |
+| Gameplay loop | Only the bounded A4 first-playable expedition loop (Option A) is authorized; every other/general gameplay loop remains NOT AUTHORIZED |
+| Event rewards / effect execution / real event content | NOT AUTHORIZED (A4 reuses the existing EVT1–EVT4 lifecycle only — no reward generation, no effect execution, no real event content) |
+| Combat / raids / factions / cargo voyages | NOT AUTHORIZED |
+| Guardian system (progression / roster / evolution / equipment / combat powers) | NOT AUTHORIZED — A4 uses only a fixed starting Guardian (Raxa/Tarin/Nova) as an equivalent sidegrade |
+| Gameplay UI | NOT AUTHORIZED beyond the minimal Alpha-quality Windows desktop interface for the A4 loop |
 | Deployment / production packaging | NOT AUTHORIZED |
 
 ## Phase ledger
@@ -112,12 +113,15 @@ This document tracks phase progress and authorization state across the whole pro
 
 ### Alpha A4
 
-- **Status:** NOT AUTHORIZED
-- **Purpose:** Not yet selected, scoped, or defined by an approved execution brief.
-- **Durable evidence:** none.
-- **Implemented invariants:** none.
-- **Remaining blocked scope:** everything until a separate architecture decision, bounded execution brief, and explicit owner authorization exist.
-- **Next authorization gate:** an Alpha A4 Architecture Decision Record for owner review; architecture work only, not implementation authorization.
+- **Status:** AUTHORIZED — OPTION A ONLY (implementation not yet started).
+- **Decision date:** 2026-07-23.
+- **Purpose:** Bounded First Playable Expedition Loop — one canonical, repeatable, deterministic, save-safe early-game Harbor → route-anchor-outpost → Harbor loop, non-combat, using already-valid Claim Ledger routing and the existing EVT1–EVT4 lifecycle only.
+- **Controlling brief:** [`docs/alpha/ALPHA_A4_EXECUTION_BRIEF_v0.1.md`](../alpha/ALPHA_A4_EXECUTION_BRIEF_v0.1.md) (public-safe scope; authority from the private owner authorization record dated 2026-07-23, per `CLAUDE.md` §7).
+- **Verified baseline SHA:** `a08b4ad3a5dd81694c6d49cdee5d13ad4dcab5cd` (`main` = `origin/main` at authorization time).
+- **Durable evidence:** none yet — implementation has not begun. This entry records authorization only; the authorization-record PR (this ledger amendment plus the A4 brief, `CLAUDE.md` §7, and `docs/alpha/README.md`) is documentation only and moves no implementation.
+- **Implemented invariants:** none yet — no invariant conversions have occurred under A4.
+- **Remaining blocked scope:** all A4 hard exclusions — combat; raids/theft; multiplayer/networking; fleet and full ship progression; crew recruitment and detailed crew systems; full Guardian progression; selectable party and battle formations; equipment and broad loot; full Cargo/Docked Cargo system; trading and markets; unrestricted Claim Ledger `source_type`s; general expedition reward generation; effect execution/dispatch beyond the bounded loop; full Harbor Inbox; full quest framework; Atlas/world traversal; factions; threat director; economy pulses; full city-builder departments; controller certification; deployment; production — plus Alpha A5 and later.
+- **Next valid action:** bounded A4 implementation on branch `alpha/a4-first-playable-expedition-loop`, **after this authorization-record PR merges to `main`** — then a draft PR, owner review, and merge gate. A4 closes only after a verified owner-approved merge and clean post-merge reconciliation.
 
 ### Alpha A5 / A6
 
@@ -175,8 +179,10 @@ Recorded from the Alpha A2 review (findings not fixed in A2's scope; not blockin
 
 ## Next valid artifact
 
-**Alpha A4 Architecture Decision Record**
+### Alpha A4 implementation (Option A only)
 
-- **Status: NOT AUTHORIZED FOR IMPLEMENTATION.**
-- The next valid work is architecture and scope selection only: compare bounded options, identify dependencies and risks, and prepare a proposed execution brief for owner review.
-- No Alpha A4 code, schema, invariant conversion, gameplay behavior, deployment, or production work may begin until the owner separately authorizes a named A4 option.
+- **Status: AUTHORIZED — gated on the authorization-record PR merge.**
+- Alpha A4 Option A (Bounded First Playable Expedition Loop) is authorized by the owner (2026-07-23), scoped by [`docs/alpha/ALPHA_A4_EXECUTION_BRIEF_v0.1.md`](../alpha/ALPHA_A4_EXECUTION_BRIEF_v0.1.md).
+- The next valid work is bounded A4 implementation on branch `alpha/a4-first-playable-expedition-loop`, **only after** the authorization-record PR (this ledger amendment plus the A4 brief, `CLAUDE.md` §7, and `docs/alpha/README.md`) is reviewed and merged to `main`. Until that merge, A4 remains not started.
+- Implementation is bounded strictly to the A4 brief. No A5+ scope, no A4 hard-exclusion system, no deployment, and no production work may begin; anything outside the brief is a stop condition (`CLAUDE.md` §6, A4 brief §11).
+- A4 ships as a draft PR only; the Implementer never marks ready or merges. A4 closes only after a verified owner-approved merge and clean post-merge reconciliation.
