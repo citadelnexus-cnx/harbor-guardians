@@ -1,0 +1,13 @@
+{
+  "//": "Alpha A4 browser-engine emit — compiles src/ui/engine.ts and its browser-safe graph (the real sim + save serialization/migration) to ESM under src/ui/shell/engine/ for the Tauri webview. Uses the existing tsc (no bundler, no new dependency). The base tsconfig ignores the emitted .js (allowJs is off).",
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "noEmit": false,
+    "outDir": "src/ui/shell/engine",
+    "rootDir": "src",
+    "declaration": false,
+    "sourceMap": false,
+    "lib": ["ES2022", "DOM"]
+  },
+  "include": ["src/ui/engine.ts"]
+}

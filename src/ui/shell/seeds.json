@@ -1,0 +1,382 @@
+{
+  "expedition": {
+    "content": {
+      "content_id": "exp.first_playable",
+      "event": {
+        "event_id": "evt.a4.outpost_stabilize",
+        "min_provisions_to_begin": 40
+      },
+      "guardian_primary_salvage": {
+        "gdn.nova": "Crowns",
+        "gdn.raxa": "Iron",
+        "gdn.tarin": "Provisions"
+      },
+      "outcome_readiness": {
+        "forced_withdrawal": {
+          "crew": "damaged",
+          "guardian": "damaged",
+          "vessel": "damaged"
+        },
+        "full_success": {
+          "crew": "ready",
+          "guardian": "ready",
+          "vessel": "ready"
+        },
+        "partial_success": {
+          "crew": "damaged",
+          "guardian": "ready",
+          "vessel": "ready"
+        },
+        "retreat": {
+          "crew": "ready",
+          "guardian": "ready",
+          "vessel": "damaged"
+        }
+      },
+      "outpost": {
+        "condition": "damaged",
+        "outpost_id": "outpost.driftbreak"
+      },
+      "overflow_cap_multiplier": 3,
+      "route": {
+        "legs": 2,
+        "route_id": "route.tideward_shoals"
+      },
+      "salvage_total": {
+        "forced_withdrawal": 0,
+        "full_success": 1400,
+        "partial_success": 400,
+        "retreat": 120
+      },
+      "supply_set": {
+        "Crowns": 40,
+        "Provisions": 30
+      }
+    },
+    "schema_version": "0.1.0",
+    "value_metadata": [
+      {
+        "gate": "A4",
+        "id": "exp.first_playable.route.legs",
+        "invariant_refs": [
+          "DC1",
+          "DC4"
+        ],
+        "path": "content.route.legs",
+        "source_doc_section": "ALPHA_A4_EXECUTION_BRIEF v0.1 §2.5 (one short deterministic route — not the World Atlas graph)",
+        "unit": "flat"
+      },
+      {
+        "gate": "A4",
+        "id": "exp.first_playable.supply_set.provisions",
+        "invariant_refs": [
+          "DC1",
+          "DC4",
+          "OPS1"
+        ],
+        "path": "content.supply_set.Provisions",
+        "source_doc_section": "ALPHA_A4_EXECUTION_BRIEF v0.1 §2.4 (small deterministic supply set; refunded on cancel — OPS1)",
+        "unit": "per_run"
+      },
+      {
+        "gate": "A4",
+        "id": "exp.first_playable.supply_set.crowns",
+        "invariant_refs": [
+          "DC1",
+          "DC4",
+          "OPS1"
+        ],
+        "path": "content.supply_set.Crowns",
+        "source_doc_section": "ALPHA_A4_EXECUTION_BRIEF v0.1 §2.4 (small deterministic supply set; refunded on cancel — OPS1)",
+        "unit": "per_run"
+      },
+      {
+        "gate": "A4",
+        "id": "exp.first_playable.overflow_cap_multiplier",
+        "invariant_refs": [
+          "DC1",
+          "DC4"
+        ],
+        "path": "content.overflow_cap_multiplier",
+        "source_doc_section": "ALPHA_A4_EXECUTION_BRIEF v0.1 §2.12 (unsafe Overflow capped at 3× current Safe Storage capacity)",
+        "unit": "flat"
+      },
+      {
+        "gate": "A4",
+        "id": "exp.first_playable.salvage_total.full_success",
+        "invariant_refs": [
+          "DC1",
+          "DC4"
+        ],
+        "path": "content.salvage_total.full_success",
+        "source_doc_section": "ALPHA_A4_EXECUTION_BRIEF v0.1 §2.9/§2.11 (recovered salvage on full success — equal total across Guardians, brief §4)",
+        "unit": "per_run"
+      },
+      {
+        "gate": "A4",
+        "id": "exp.first_playable.salvage_total.partial_success",
+        "invariant_refs": [
+          "DC1",
+          "DC4"
+        ],
+        "path": "content.salvage_total.partial_success",
+        "source_doc_section": "ALPHA_A4_EXECUTION_BRIEF v0.1 §2.9/§2.11 (recovered salvage on partial success)",
+        "unit": "per_run"
+      },
+      {
+        "gate": "A4",
+        "id": "exp.first_playable.salvage_total.retreat",
+        "invariant_refs": [
+          "DC1",
+          "DC4"
+        ],
+        "path": "content.salvage_total.retreat",
+        "source_doc_section": "ALPHA_A4_EXECUTION_BRIEF v0.1 §2.9/§2.11 (limited salvage recovered on retreat)",
+        "unit": "per_run"
+      },
+      {
+        "gate": "A4",
+        "id": "exp.first_playable.salvage_total.forced_withdrawal",
+        "invariant_refs": [
+          "DC1",
+          "DC4"
+        ],
+        "path": "content.salvage_total.forced_withdrawal",
+        "source_doc_section": "ALPHA_A4_EXECUTION_BRIEF v0.1 §2.9 (forced withdrawal recovers nothing by default)",
+        "unit": "per_run"
+      },
+      {
+        "gate": "A4",
+        "id": "exp.first_playable.event.min_provisions_to_begin",
+        "invariant_refs": [
+          "DC1",
+          "DC4",
+          "EVT4"
+        ],
+        "path": "content.event.min_provisions_to_begin",
+        "source_doc_section": "15_EVENT_SYSTEM_SPEC v0.2 §3 + ALPHA_A4_EXECUTION_BRIEF v0.1 §2.6 (EVT4 observable trigger: Harbor Provisions ≥ threshold to begin the objective)",
+        "unit": "flat"
+      }
+    ]
+  },
+  "storage": {
+    "schema_version": "0.1.0",
+    "storage": {
+      "Aether": {
+        "exposed_capacity_st1": 400,
+        "safe_capacity_st1": 200,
+        "start_stock": 0,
+        "total_capacity_st1": 600
+      },
+      "Crowns": {
+        "exposed_capacity_st1": 1000,
+        "safe_capacity_st1": 500,
+        "start_stock": 200,
+        "total_capacity_st1": 1500
+      },
+      "Iron": {
+        "exposed_capacity_st1": 600,
+        "safe_capacity_st1": 300,
+        "start_stock": 100,
+        "total_capacity_st1": 900
+      },
+      "Provisions": {
+        "exposed_capacity_st1": 600,
+        "safe_capacity_st1": 300,
+        "start_stock": 150,
+        "total_capacity_st1": 900
+      }
+    },
+    "value_metadata": [
+      {
+        "gate": "world_creation",
+        "id": "eco.storage.crowns.start_stock",
+        "invariant_refs": [
+          "DC1",
+          "DC4"
+        ],
+        "path": "storage.Crowns.start_stock",
+        "source_doc_section": "01_ECONOMY_FOUNDATION v1.7 §3 (owner-approved starting stock)",
+        "unit": "flat"
+      },
+      {
+        "gate": "ST1",
+        "id": "eco.storage.crowns.safe_capacity_st1",
+        "invariant_refs": [
+          "DC1",
+          "DC4",
+          "DC6"
+        ],
+        "path": "storage.Crowns.safe_capacity_st1",
+        "source_doc_section": "01_ECONOMY_FOUNDATION v1.7 §7 (Crowns ST1 S; D1)",
+        "unit": "flat"
+      },
+      {
+        "gate": "ST1",
+        "id": "eco.storage.crowns.exposed_capacity_st1",
+        "invariant_refs": [
+          "DC1",
+          "DC4",
+          "DC6"
+        ],
+        "path": "storage.Crowns.exposed_capacity_st1",
+        "source_doc_section": "01_ECONOMY_FOUNDATION v1.7 §7 (Crowns exposed 2S; D1; exposed Crown surplus raidable, no decay — D23)",
+        "unit": "flat"
+      },
+      {
+        "gate": "ST1",
+        "id": "eco.storage.crowns.total_capacity_st1",
+        "invariant_refs": [
+          "DC1",
+          "DC4",
+          "DC6"
+        ],
+        "path": "storage.Crowns.total_capacity_st1",
+        "source_doc_section": "01_ECONOMY_FOUNDATION v1.7 §7 (Crowns Total 3S; D1 hard stop)",
+        "unit": "flat"
+      },
+      {
+        "gate": "world_creation",
+        "id": "eco.storage.provisions.start_stock",
+        "invariant_refs": [
+          "DC1",
+          "DC4"
+        ],
+        "path": "storage.Provisions.start_stock",
+        "source_doc_section": "01_ECONOMY_FOUNDATION v1.7 §3 (owner-approved starting stock)",
+        "unit": "flat"
+      },
+      {
+        "gate": "ST1",
+        "id": "eco.storage.provisions.safe_capacity_st1",
+        "invariant_refs": [
+          "DC1",
+          "DC4",
+          "DC6"
+        ],
+        "path": "storage.Provisions.safe_capacity_st1",
+        "source_doc_section": "01_ECONOMY_FOUNDATION v1.7 §7 (Provisions ST1 S; D1)",
+        "unit": "flat"
+      },
+      {
+        "gate": "ST1",
+        "id": "eco.storage.provisions.exposed_capacity_st1",
+        "invariant_refs": [
+          "DC1",
+          "DC4",
+          "DC6"
+        ],
+        "path": "storage.Provisions.exposed_capacity_st1",
+        "source_doc_section": "01_ECONOMY_FOUNDATION v1.7 §7 (Provisions exposed 2S; D1; spoilage behavior is FUTURE BUILD — no pulse sim at A1)",
+        "unit": "flat"
+      },
+      {
+        "gate": "ST1",
+        "id": "eco.storage.provisions.total_capacity_st1",
+        "invariant_refs": [
+          "DC1",
+          "DC4",
+          "DC6"
+        ],
+        "path": "storage.Provisions.total_capacity_st1",
+        "source_doc_section": "01_ECONOMY_FOUNDATION v1.7 §7 (Provisions Total 3S; D1 hard stop)",
+        "unit": "flat"
+      },
+      {
+        "gate": "world_creation",
+        "id": "eco.storage.iron.start_stock",
+        "invariant_refs": [
+          "DC1",
+          "DC4"
+        ],
+        "path": "storage.Iron.start_stock",
+        "source_doc_section": "01_ECONOMY_FOUNDATION v1.7 §3 (owner-approved starting stock)",
+        "unit": "flat"
+      },
+      {
+        "gate": "ST1",
+        "id": "eco.storage.iron.safe_capacity_st1",
+        "invariant_refs": [
+          "DC1",
+          "DC4",
+          "DC6"
+        ],
+        "path": "storage.Iron.safe_capacity_st1",
+        "source_doc_section": "01_ECONOMY_FOUNDATION v1.7 §7 (Iron ST1 S; D1)",
+        "unit": "flat"
+      },
+      {
+        "gate": "ST1",
+        "id": "eco.storage.iron.exposed_capacity_st1",
+        "invariant_refs": [
+          "DC1",
+          "DC4",
+          "DC6"
+        ],
+        "path": "storage.Iron.exposed_capacity_st1",
+        "source_doc_section": "01_ECONOMY_FOUNDATION v1.7 §7 (Iron exposed 2S; D1; no decay)",
+        "unit": "flat"
+      },
+      {
+        "gate": "ST1",
+        "id": "eco.storage.iron.total_capacity_st1",
+        "invariant_refs": [
+          "DC1",
+          "DC4",
+          "DC6"
+        ],
+        "path": "storage.Iron.total_capacity_st1",
+        "source_doc_section": "01_ECONOMY_FOUNDATION v1.7 §7 (Iron Total 3S; D1 hard stop — idles at 3S)",
+        "unit": "flat"
+      },
+      {
+        "gate": "world_creation",
+        "id": "eco.storage.aether.start_stock",
+        "invariant_refs": [
+          "DC1",
+          "DC4"
+        ],
+        "path": "storage.Aether.start_stock",
+        "source_doc_section": "01_ECONOMY_FOUNDATION v1.7 §3 (owner-approved starting stock: Aether 0)",
+        "unit": "flat"
+      },
+      {
+        "gate": "ST4",
+        "id": "eco.storage.aether.safe_capacity_st1",
+        "invariant_refs": [
+          "DC1",
+          "DC4",
+          "DC6"
+        ],
+        "path": "storage.Aether.safe_capacity_st1",
+        "source_doc_section": "01_ECONOMY_FOUNDATION v1.7 §7 (Aether S 200 gated ST4 — Crystal store; band seeded at A1, faucet is FUTURE BUILD)",
+        "unit": "flat"
+      },
+      {
+        "gate": "ST4",
+        "id": "eco.storage.aether.exposed_capacity_st1",
+        "invariant_refs": [
+          "DC1",
+          "DC4",
+          "DC6"
+        ],
+        "path": "storage.Aether.exposed_capacity_st1",
+        "source_doc_section": "01_ECONOMY_FOUNDATION v1.7 §7 (Aether exposed 2S; D1; leak behavior is FUTURE BUILD — no pulse sim at A1)",
+        "unit": "flat"
+      },
+      {
+        "gate": "ST4",
+        "id": "eco.storage.aether.total_capacity_st1",
+        "invariant_refs": [
+          "DC1",
+          "DC4",
+          "DC6"
+        ],
+        "path": "storage.Aether.total_capacity_st1",
+        "source_doc_section": "01_ECONOMY_FOUNDATION v1.7 §7 (Aether Total 3S; D1 hard stop)",
+        "unit": "flat"
+      }
+    ]
+  }
+}
+

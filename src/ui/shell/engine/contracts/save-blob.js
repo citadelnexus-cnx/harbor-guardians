@@ -54,12 +54,6 @@
  * Empty-state zeros are the identity state; real start stocks arrive from
  * /data resource_definition seeds (Economy §3/§7, DC1/DC4).
  */
-
-import type { ClaimLedgerState, PendingRewardResolution } from "./claim-ledger.js";
-import type { CoreResource, RaidPhase } from "./enums.js";
-import type { EventInstance } from "./event.js";
-import type { ExpeditionState, HarborOperationsState } from "./expedition.js";
-
 /**
  * Current save schema version (infrastructure version, not a gameplay value).
  * Bumping it is a migration event: function + fixture + round-trip test
@@ -69,77 +63,3 @@ import type { ExpeditionState, HarborOperationsState } from "./expedition.js";
  * v4 = A4 expedition + harbor_operations blocks (first playable loop).
  */
 export const SAVE_SCHEMA_VERSION = 4;
-
-/** Save/Load §1/§2: versions + absolute UTC timestamp (ISO-8601). */
-export interface SaveMeta {
-  save_schema_version: number;
-  game_version: string;
-  /** ISO-8601 UTC (§2); reconciliation uses UTC deltas only (§3). */
-  last_saved_utc: string;
-}
-
-/**
- * In-game World Clock (§2: "day index, time-of-day"). `time_of_day` is an
- * integer pulse counter within the day; its cadence binds to the Economy
- * pulse when the sim core lands (E8 pacing is UNKNOWN until measured).
- */
-export interface WorldClock {
-  day_index: number;
-  time_of_day: number;
-}
-
-/**
- * Per-resource stored state: Safe S + Exposed 2S bands (D1). These are state
- * values; the S/2S/3S caps themselves are /data seed values (DC1), not save
- * fields.
- */
-export interface ResourceBand {
-  safe: number;
-  exposed: number;
-}
-
-/** Threat block, minimal at M0: phase only (Doc 05; components land with the threat director). */
-export interface ThreatBlock {
-  phase: RaidPhase;
-}
-
-/** M0 empty-shell placeholder: schema-enforced empty list until the block's feature + migration land. */
-export type EmptyListM0 = [];
-
-/** M0 empty-shell placeholder: schema-enforced empty map until the block's feature + migration land. */
-export type EmptyMapM0 = Record<string, never>;
-
-/**
- * The complete save blob (Save/Load §16). Field order here is documentation
- * only — serialization is canonical (sorted keys) so round-trips are
- * byte-identical regardless of construction order.
- */
-export interface SaveBlob {
-  meta: SaveMeta;
-  world_clock: WorldClock;
-  /** Safe + exposed per resource incl. Crown exposed (§16); keys are CoreResource ONLY (DC6). */
-  resources: Record<CoreResource, ResourceBand>;
-  /** BuildingState/queue records land with the Build Queue feature. */
-  buildings: EmptyListM0;
-  /** WorkerState records land with the Economy feature. */
-  workers: EmptyListM0;
-  threat: ThreatBlock;
-  /** Claim Ledger block (Save/Load §16: packages + story claims + remainders) — real shape since A2 (v2). */
-  claim_ledger: ClaimLedgerState;
-  /** Persistent pending_reward_resolution records (Doc 04 §10; Save/Load §11; D19/L14) — real shape since A2 (v2). */
-  pending_reward_resolution: PendingRewardResolution[];
-  /** Mid-flight event-lifecycle instances (Doc 15 §2; EVT3) — real shape since A3 (v3). Inert staged effects only; no effect execution exists. */
-  events: EventInstance[];
-  /** Bounded First Playable Expedition Loop domain (brief §2/§3) — real shape since A4 (v4). */
-  expedition: ExpeditionState;
-  /** Unsafe Overflow holdings + one-time intro/unlock flags (brief §2.12/§2.16/§2.17) — real shape since A4 (v4). */
-  harbor_operations: HarborOperationsState;
-  /** system_message records (Save/Load §12, M8). */
-  system_messages: EmptyListM0;
-  /** Per-faction Merit standing (soulbound; never in 3S bands — DC6/FCT1). */
-  merit: EmptyMapM0;
-  /** Persistent guardian bond state (GDN10); null until the guardian feature lands. */
-  guardian_bond: null;
-  /** Story/flag state (§16 "flags/story"). */
-  flags_story: EmptyMapM0;
-}

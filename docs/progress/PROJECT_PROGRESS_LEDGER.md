@@ -31,7 +31,7 @@ This document tracks phase progress and authorization state across the whole pro
 | Alpha A1 | CLOSED |
 | Alpha A2 | CLOSED |
 | Alpha A3 | CLOSED |
-| Alpha A4 | AUTHORIZED — OPTION A ONLY (implementation not yet started) |
+| Alpha A4 | REVIEW / ACCEPTANCE PASSED — PENDING PR PROMOTION AND MERGE — Option A implementation complete; owner interactive Windows acceptance PASS (2026-07-23); draft PR #21 open, not yet merged |
 | Alpha A5–A6 | FUTURE |
 | Beta | FUTURE |
 | Production | FUTURE |
@@ -113,15 +113,17 @@ This document tracks phase progress and authorization state across the whole pro
 
 ### Alpha A4
 
-- **Status:** AUTHORIZED — OPTION A ONLY (implementation not yet started).
-- **Decision date:** 2026-07-23.
-- **Purpose:** Bounded First Playable Expedition Loop — one canonical, repeatable, deterministic, save-safe early-game Harbor → route-anchor-outpost → Harbor loop, non-combat, using already-valid Claim Ledger routing and the existing EVT1–EVT4 lifecycle only.
+- **Status:** REVIEW / ACCEPTANCE PASSED — PENDING PR PROMOTION AND MERGE. Option A implementation complete; owner-executed interactive Windows acceptance returned PASS on 2026-07-23; draft PR #21 open (not yet promoted, not merged, not closed).
+- **Decision date:** 2026-07-23 (authorization); implementation drafted 2026-07-23; owner Windows acceptance 2026-07-23.
+- **Purpose:** Bounded First Playable Expedition Loop — one canonical, repeatable, deterministic, save-safe early-game Harbor → route-anchor-outpost → Harbor loop, non-combat, using already-valid Claim Ledger routing (the Ledger is untouched) and the existing EVT1–EVT4 lifecycle only.
 - **Controlling brief:** [`docs/alpha/ALPHA_A4_EXECUTION_BRIEF_v0.1.md`](../alpha/ALPHA_A4_EXECUTION_BRIEF_v0.1.md) (public-safe scope; authority from the private owner authorization record dated 2026-07-23, per `CLAUDE.md` §7).
-- **Verified baseline SHA:** `a08b4ad3a5dd81694c6d49cdee5d13ad4dcab5cd` (`main` = `origin/main` at authorization time).
-- **Durable evidence:** none yet — implementation has not begun. This entry records authorization only; the authorization-record PR (this ledger amendment plus the A4 brief, `CLAUDE.md` §7, and `docs/alpha/README.md`) is documentation only and moves no implementation.
-- **Implemented invariants:** none yet — no invariant conversions have occurred under A4.
+- **Verified post-merge baseline SHA:** `b46c2d09bf25b809c1671265225bc2f0d0498287` (`main` = `origin/main` after the authorization-record PR #20 merged); implementation branch `alpha/a4-first-playable-expedition-loop`.
+- **Delivered:** typed `expedition` domain + `expedition-seed` contracts and generated `expedition_seed` schema; a pure deterministic expedition state machine (`src/sim/expedition.ts`) with stable duplicate-resistant commands, Theo's-vessel abstraction, the fixed group + starting-Guardian choice, equal-total/distinct-resource Guardian salvage composition, deterministic seeded supplies + consumption, one route + one damaged outpost, bounded EVT1–EVT4 reuse, the five outcomes (cancellation/full/partial/retreat/forced-withdrawal), return/dock/unload with Safe Storage + unsafe Overflow (capped ×3 Safe) + blocked-unload preservation, bounded recovery, first-completion route-anchor unlock, repeatable expeditions, and exact save/exit/relaunch/resume; **save schema v3→v4** (deterministic, idempotent, tamper-refusing migration + committed `save.v3` fixture) for the new `expedition`/`harbor_operations` blocks; one canonical A4 seed + negative fixture; and — after the PR #21 review (which rejected the initial read-only transcript viewer) — an **interactive** Windows desktop player flow: a pure `ExpeditionController` (`src/ui/controller.ts`) mapping player intents onto the authoritative sim, compiled to the webview via `tsc` (`src/ui/shell/engine/`, no bundler/no new dep), and a minimal atomic Tauri persistence bridge (`save_game`/`load_game`) for save/exit/relaunch/resume. The deterministic transcript remains as demonstration/test evidence only.
+- **Implemented invariants:** **OPS1** (expedition cancel/refund routing — converted stub→implemented; both the fresh-harbor full-refund and the 3S-block branches), plus **S5/S7 extended** to cover the v4 expedition-bearing round-trip and crash-survival. A4-specific properties (conservation, overflow ×3 cap, blocked-unload preservation, guardian equivalence, duplicate-command resistance, determinism, migration idempotency, UI-command→transition mapping, exact-phase resume) are proven by `tests/expedition.test.ts` + `tests/save-load.test.ts` + `tests/ui-controller.test.ts` without inventing registry IDs.
+- **Verification (automated):** `typecheck`, `lint` (0 warnings), `schema:validate` (13 seeds / 4 sets), `sim:harness` **A4 BATCH GREEN** (132 registered / 17 implemented / 115 fail-loud; determinism byte-identical at seed 20260714), `test:harbor` 9/9, `test:ledger` 16/16, `test:events` 21/21, `test:save` 25/25, `test:expedition` 15/15, `test:ui` 11/11, `cargo test --locked` (persistence bridge) 1/1, `cargo build --locked` (Tauri desktop crate compiles with the interactive frontend + engine embedded). Interactive Windows GUI acceptance (A–H plus destructive-discard safety) is documented in `ALPHA_A4_WINDOWS_ACCEPTANCE.md` and was **executed by the owner** in an interactive Windows desktop session on 2026-07-23 with disposition **PASS** — the implementer's headless environment cannot launch a GUI, so that PASS is the owner's recorded observation, not an implementer claim.
+- **Result (pending merge):** **132 registered / 17 implemented / 115 fail-loud** (adds OPS1 to the 16 prior).
 - **Remaining blocked scope:** all A4 hard exclusions — combat; raids/theft; multiplayer/networking; fleet and full ship progression; crew recruitment and detailed crew systems; full Guardian progression; selectable party and battle formations; equipment and broad loot; full Cargo/Docked Cargo system; trading and markets; unrestricted Claim Ledger `source_type`s; general expedition reward generation; effect execution/dispatch beyond the bounded loop; full Harbor Inbox; full quest framework; Atlas/world traversal; factions; threat director; economy pulses; full city-builder departments; controller certification; deployment; production — plus Alpha A5 and later.
-- **Next valid action:** bounded A4 implementation on branch `alpha/a4-first-playable-expedition-loop`, **after this authorization-record PR merges to `main`** — then a draft PR, owner review, and merge gate. A4 closes only after a verified owner-approved merge and clean post-merge reconciliation.
+- **Next valid action:** owner promotion and merge of the A4 implementation draft PR (interactive Windows acceptance already PASS, 2026-07-23); A4 closes only after a verified owner-approved merge and clean post-merge reconciliation.
 
 ### Alpha A5 / A6
 
@@ -152,13 +154,13 @@ This document tracks phase progress and authorization state across the whole pro
 
 ## Current invariant summary
 
-As of closed Alpha A3 and merged PR #18, the sim-harness invariant registry (`sim-harness/registry.ts`) holds:
+As of closed Alpha A3 (merged PR #18) plus the Alpha A4 implementation draft PR (REVIEW — pending owner merge), the sim-harness invariant registry (`sim-harness/registry.ts`) holds:
 
 - **132 total registered invariants** (every ID from the SIM_HARNESS_ACCEPTANCE_SPEC, Doc 07, and later specs is addressable — no ID is ever silently absent).
-- **16 implemented and proven green:** L1, L5, L6, L7, L11, L14, S5, S7, DC1, DC4, DC5, DC6, EVT1, EVT2, EVT3, EVT4.
-- **116 remain fail-loud stubs** — executing any of them throws `InvariantStubError`; none is claimed as passing without a real feature and evidence behind it.
+- **17 implemented and proven green (pending A4 merge):** L1, L5, L6, L7, L11, L14, S5, S7, **OPS1**, DC1, DC4, DC5, DC6, EVT1, EVT2, EVT3, EVT4. OPS1 (expedition cancel/refund routing) was converted at A4; S5/S7 were extended to the v4 expedition-bearing round-trip + crash proofs.
+- **115 remain fail-loud stubs** — executing any of them throws `InvariantStubError`; none is claimed as passing without a real feature and evidence behind it.
 
-This is evidence, not a target: the count only changes when a future phase PR converts a specific stub to a real, tested check.
+This is evidence, not a target: the count only changes when a phase PR converts a specific stub to a real, tested check. The A4 delta (16→17) becomes durable only once the A4 draft PR is owner-approved and merged.
 
 ## Deferred hardening notes
 
@@ -179,10 +181,9 @@ Recorded from the Alpha A2 review (findings not fixed in A2's scope; not blockin
 
 ## Next valid artifact
 
-### Alpha A4 implementation (Option A only)
+### Owner promotion + merge of the Alpha A4 implementation draft PR
 
-- **Status: AUTHORIZED — gated on the authorization-record PR merge.**
-- Alpha A4 Option A (Bounded First Playable Expedition Loop) is authorized by the owner (2026-07-23), scoped by [`docs/alpha/ALPHA_A4_EXECUTION_BRIEF_v0.1.md`](../alpha/ALPHA_A4_EXECUTION_BRIEF_v0.1.md).
-- The next valid work is bounded A4 implementation on branch `alpha/a4-first-playable-expedition-loop`, **only after** the authorization-record PR (this ledger amendment plus the A4 brief, `CLAUDE.md` §7, and `docs/alpha/README.md`) is reviewed and merged to `main`. Until that merge, A4 remains not started.
-- Implementation is bounded strictly to the A4 brief. No A5+ scope, no A4 hard-exclusion system, no deployment, and no production work may begin; anything outside the brief is a stop condition (`CLAUDE.md` §6, A4 brief §11).
-- A4 ships as a draft PR only; the Implementer never marks ready or merges. A4 closes only after a verified owner-approved merge and clean post-merge reconciliation.
+- **Status: REVIEW / ACCEPTANCE PASSED — PENDING PR PROMOTION AND MERGE.**
+- The Alpha A4 Option A implementation (Bounded First Playable Expedition Loop) is complete on branch `alpha/a4-first-playable-expedition-loop`, scoped strictly by [`docs/alpha/ALPHA_A4_EXECUTION_BRIEF_v0.1.md`](../alpha/ALPHA_A4_EXECUTION_BRIEF_v0.1.md), and opened as a **draft** PR (#21) with full verification evidence. Owner-executed interactive Windows acceptance returned **PASS** on 2026-07-23 (scenarios A–H + destructive-discard safety, [`docs/alpha/ALPHA_A4_WINDOWS_ACCEPTANCE.md`](../alpha/ALPHA_A4_WINDOWS_ACCEPTANCE.md)). The Implementer does not mark it ready or merge.
+- The next valid work is the owner's promotion and merge of that draft PR. On owner-approved merge, this ledger's A4 entry moves REVIEW → CLOSED and `CLAUDE.md` §7 is updated to record A4 closed.
+- No A5+ scope, no A4 hard-exclusion system, no deployment, and no production work may begin; anything outside the brief remains a stop condition (`CLAUDE.md` §6, A4 brief §11).

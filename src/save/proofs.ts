@@ -26,6 +26,8 @@ import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import type { ClaimLedgerRulesSeed } from "../contracts/claim-ledger-rules.js";
 import type { ClaimLedgerState, PendingRewardResolution } from "../contracts/claim-ledger.js";
+import type { ExpeditionCommand } from "../contracts/expedition.js";
+import type { ExpeditionSeed } from "../contracts/expedition-seed.js";
 import type { ResourceStorageSeed } from "../contracts/resource-storage.js";
 import type { SaveBlob, WorldClock } from "../contracts/save-blob.js";
 import {
@@ -34,6 +36,13 @@ import {
   createClaimLedgerState,
   routeRewardPackage,
 } from "../sim/claim-ledger.js";
+import {
+  applyCommand,
+  assertExpeditionDomainValid,
+  createExpeditionState,
+  createHarborOperationsState,
+  type ExpeditionDomain,
+} from "../sim/expedition.js";
 import { CORE_RESOURCES, createHarborState, deposit, fromResourceBands, toResourceBands, type HarborState } from "../sim/harbor-state.js";
 import { canonicalSerialize } from "./canonical-json.js";
 import { loadSave, rollbackPath, saveAtomically, tempPath, type CrashSimulationHooks } from "./atomic-save.js";
@@ -44,6 +53,8 @@ import { SaveValidationError, type SaveBlobValidator } from "./save-blob-validat
 const PROOF_GAME_VERSION = "0.0.0";
 const PROOF_UTC_V1 = "2026-01-01T00:00:00.000Z";
 const PROOF_UTC_V2 = "2026-01-01T00:00:01.000Z";
+/** Deterministic base seed for the A4 expedition-stream proofs (harness parameter, not gameplay). */
+const PROOF_EXPEDITION_SEED = 20260723;
 
 export interface ProofResult {
   pass: boolean;
@@ -389,5 +400,205 @@ export function proveCrashDuringWriteSurvival(
       `loadable through 4 simulated crash points (torn temp write · pre-fsync · pre-rollback · pre-rename) plus a ` +
       `schema-validation abort; the next successful save committed atomically and preserved the prior save as ` +
       `rollback. No partial write ever became the current save; no crash duplicated or lost a reward.`,
+  };
+}
+
+// ── A4 expedition-bearing proofs (SaveBlob v4) ───────────────────────────────
+
+/** Apply one command in a proof, asserting it was really applied (not an idempotent no-op). */
+function drive(domain: ExpeditionDomain, command: ExpeditionCommand, seed: ExpeditionSeed): ExpeditionDomain {
+  const result = applyCommand(domain, command, { seed: PROOF_EXPEDITION_SEED, content: seed.content });
+  if (!result.applied) {
+    throw new Error(`expedition proof: command ${command.kind} was not applied`);
+  }
+  return result.domain;
+}
+
+/**
+ * Deterministic mid-loop A4 domain for the save proofs: one full-success
+ * expedition run to completion (populating completed_expeditions, the
+ * route-anchor unlock, and — when the seeded salvage exceeds the target
+ * resource's 3S room — the unsafe Overflow), then a SECOND expedition left
+ * mid-loop at `docked` with recovered cargo aboard. All amounts derive from
+ * the schema-validated storage + expedition seeds (No Magic Numbers).
+ */
+export function buildExpeditionBearingDomain(
+  storageSeed: ResourceStorageSeed,
+  expeditionSeed: ExpeditionSeed,
+): ExpeditionDomain {
+  let domain: ExpeditionDomain = {
+    expedition: createExpeditionState(),
+    harbor_operations: createHarborOperationsState(),
+    harbor: createHarborState(storageSeed),
+  };
+
+  // First expedition: full loop to completion with Nova (Crowns composition).
+  domain = drive(domain, { command_id: "p1.prepare", kind: "prepare", guardian_id: "gdn.nova" }, expeditionSeed);
+  domain = drive(domain, { command_id: "p1.dispatch", kind: "dispatch" }, expeditionSeed);
+  domain = drive(domain, { command_id: "p1.arrive", kind: "arrive" }, expeditionSeed);
+  domain = drive(domain, { command_id: "p1.resolve", kind: "resolve", outcome: "full_success" }, expeditionSeed);
+  domain = drive(domain, { command_id: "p1.dock", kind: "dock" }, expeditionSeed);
+  // Unload until the hold is empty (Safe Storage → Overflow); bounded loop.
+  for (let i = 0; i < CORE_RESOURCES.length + 1 && domain.expedition.active !== null; i += 1) {
+    const before = domain;
+    domain = drive(domain, { command_id: `p1.unload.${i}`, kind: "unload" }, expeditionSeed);
+    const remaining = domain.expedition.active?.cargo_aboard ?? {};
+    if (Object.keys(remaining).length === 0) break;
+    if (domain === before) break;
+  }
+  domain = drive(domain, { command_id: "p1.complete", kind: "complete" }, expeditionSeed);
+  if (domain.expedition.phase === "recovering") {
+    domain = drive(domain, { command_id: "p1.recover", kind: "recover" }, expeditionSeed);
+  }
+
+  // Second expedition: leave mid-loop at `docked` with cargo aboard (partial success).
+  domain = drive(domain, { command_id: "p2.prepare", kind: "prepare", guardian_id: "gdn.tarin" }, expeditionSeed);
+  domain = drive(domain, { command_id: "p2.dispatch", kind: "dispatch" }, expeditionSeed);
+  domain = drive(domain, { command_id: "p2.arrive", kind: "arrive" }, expeditionSeed);
+  domain = drive(domain, { command_id: "p2.resolve", kind: "resolve", outcome: "partial_success" }, expeditionSeed);
+  domain = drive(domain, { command_id: "p2.dock", kind: "dock" }, expeditionSeed);
+
+  assertExpeditionDomainValid(domain, expeditionSeed.content);
+  return domain;
+}
+
+/** Project an expedition-bearing domain onto a full SaveBlob v4. */
+function expeditionBearingBlob(domain: ExpeditionDomain, utc: string): SaveBlob {
+  return {
+    ...createEmptySaveBlob({ game_version: PROOF_GAME_VERSION, last_saved_utc: utc }),
+    resources: toResourceBands(domain.harbor),
+    expedition: domain.expedition,
+    harbor_operations: domain.harbor_operations,
+  };
+}
+
+/**
+ * S5 @ A4: the EXPEDITION-BEARING state round-trips byte-identically — the
+ * active expedition (phase, guardian, cargo aboard, resolved event instance),
+ * the completed-count / route-anchor unlock, and the unsafe Overflow holdings
+ * all survive save → load exactly (brief §2 exact save/relaunch/resume;
+ * Save/Load §16). Repeated load is byte-identical (no reload duplication).
+ */
+export function proveExpeditionStateRoundTrip(
+  dir: string,
+  validate: SaveBlobValidator,
+  storageSeed: ResourceStorageSeed,
+  expeditionSeed: ExpeditionSeed,
+): ProofResult {
+  const slot = join(dir, "expedition-roundtrip.save.json");
+  const domain = buildExpeditionBearingDomain(storageSeed, expeditionSeed);
+  const blob = expeditionBearingBlob(domain, PROOF_UTC_V1);
+
+  saveAtomically(slot, blob, { validate });
+  const onDisk = readFileSync(slot, "utf8");
+  const loaded = loadSave(slot, validate);
+  if (canonicalSerialize(loaded) !== onDisk) {
+    return failed("S5 expedition round-trip: save→load→re-serialize NOT byte-identical for the expedition-bearing state");
+  }
+  if (canonicalSerialize(loaded.expedition) !== canonicalSerialize(domain.expedition)) {
+    return failed("S5 expedition round-trip: expedition block changed across save/load — hidden state loss/mutation");
+  }
+  if (canonicalSerialize(loaded.harbor_operations) !== canonicalSerialize(domain.harbor_operations)) {
+    return failed("S5 expedition round-trip: harbor_operations block changed across save/load (overflow/unlock/count)");
+  }
+  const reloaded = loadSave(slot, validate);
+  if (canonicalSerialize(reloaded) !== canonicalSerialize(loaded)) {
+    return failed("S5 expedition round-trip: repeated load produced a different state — reload duplication/mutation");
+  }
+  // Rebuild the full domain from the loaded blob + seed; it must pass every A4 invariant.
+  assertExpeditionDomainValid(
+    { expedition: loaded.expedition, harbor_operations: loaded.harbor_operations, harbor: fromResourceBands(loaded.resources, storageSeed) },
+    expeditionSeed.content,
+  );
+
+  const active = domain.expedition.active;
+  const overflowResources = Object.keys(domain.harbor_operations.overflow).length;
+  return {
+    pass: true,
+    detail:
+      `A4 scope: expedition-bearing save (completed_expeditions=${domain.harbor_operations.completed_expeditions}, ` +
+      `route_anchor_operations_unlocked=${domain.harbor_operations.route_anchor_operations_unlocked}, ` +
+      `overflow over ${overflowResources} resource(s); a second expedition at phase "${domain.expedition.phase}" ` +
+      `with ${active ? Object.keys(active.cargo_aboard).length : 0} resource(s) aboard and a ${active?.event?.state ?? "no"} ` +
+      `event instance) save→load→re-serialize byte-identical; expedition and harbor_operations preserved exactly; ` +
+      `repeated load byte-identical; rebuilt domain passes every A4 invariant. All amounts from schema-validated seeds.`,
+  };
+}
+
+/**
+ * S7 @ A4: a known-good EXPEDITION-BEARING save survives — byte-identical and
+ * loadable — a simulated crash at every pre-commit pipeline point, plus a
+ * schema-validation abort; a subsequent successful save swaps in the new state
+ * and preserves the prior good save as rollback. A crash can neither duplicate
+ * the recovered cargo/overflow nor lose the mid-loop expedition (Save/Load §15).
+ */
+export function proveExpeditionCrashSurvival(
+  dir: string,
+  validate: SaveBlobValidator,
+  storageSeed: ResourceStorageSeed,
+  expeditionSeed: ExpeditionSeed,
+): ProofResult {
+  const slot = join(dir, "expedition-crash.save.json");
+  const domain = buildExpeditionBearingDomain(storageSeed, expeditionSeed);
+  const v1 = expeditionBearingBlob(domain, PROOF_UTC_V1);
+  const v2: SaveBlob = { ...v1, meta: { ...v1.meta, last_saved_utc: PROOF_UTC_V2 } };
+
+  saveAtomically(slot, v1, { validate });
+  const v1Bytes = readFileSync(slot, "utf8");
+
+  const crashAt = (point: string) => () => {
+    throw new SimulatedCrashError(point);
+  };
+  const crashPoints: ReadonlyArray<readonly [string, CrashSimulationHooks]> = [
+    ["during temp write (torn/partial write)", { duringTempWrite: crashAt("during temp write") }],
+    ["before flush (fsync)", { beforeFlush: crashAt("before flush") }],
+    ["before rollback preservation", { beforeRollback: crashAt("before rollback") }],
+    ["before commit rename", { beforeCommit: crashAt("before commit") }],
+  ];
+
+  for (const [label, hooks] of crashPoints) {
+    let threw = false;
+    try {
+      saveAtomically(slot, v2, { validate, hooks });
+    } catch (err) {
+      threw = err instanceof SimulatedCrashError;
+    }
+    if (!threw) return failed(`S7 expedition crash sim [${label}]: pipeline did not surface the simulated crash`);
+    if (readFileSync(slot, "utf8") !== v1Bytes) {
+      return failed(`S7 expedition crash sim [${label}]: prior good save was NOT byte-identical after the crash — S7 violated`);
+    }
+    if (canonicalSerialize(loadSave(slot, validate)) !== v1Bytes) {
+      return failed(`S7 expedition crash sim [${label}]: prior good save no longer loads to the same state — S7 violated`);
+    }
+  }
+
+  // Schema-validation abort: a malformed expedition block must never commit.
+  const corrupt = { ...v2, expedition: { ...v2.expedition, phase: "not_a_phase" } } as unknown as SaveBlob;
+  let validationAborted = false;
+  try {
+    saveAtomically(slot, corrupt, { validate });
+  } catch {
+    validationAborted = true;
+  }
+  if (!validationAborted) return failed("S7 expedition validation abort: malformed expedition blob was not rejected before commit");
+  if (readFileSync(slot, "utf8") !== v1Bytes) {
+    return failed("S7 expedition validation abort: prior good save was disturbed by a rejected save");
+  }
+
+  const committed = saveAtomically(slot, v2, { validate });
+  if (readFileSync(slot, "utf8") !== canonicalSerialize(v2)) {
+    return failed("S7 expedition recovery: post-crash save did not commit the new state");
+  }
+  if (!committed.rollback_preserved || readFileSync(rollbackPath(slot), "utf8") !== v1Bytes) {
+    return failed("S7 expedition recovery: prior good save was not preserved as rollback after the successful commit");
+  }
+
+  return {
+    pass: true,
+    detail:
+      `A4 scope: prior good save (${Buffer.byteLength(v1Bytes)} bytes — a completed expedition's overflow/unlock/count ` +
+      `plus a second expedition mid-loop at "docked" with cargo aboard) survived byte-identical and loadable through 4 ` +
+      `simulated crash points plus a schema-validation abort; the next successful save committed atomically and ` +
+      `preserved the prior save as rollback. No crash duplicated the recovered cargo or lost the mid-loop expedition.`,
   };
 }

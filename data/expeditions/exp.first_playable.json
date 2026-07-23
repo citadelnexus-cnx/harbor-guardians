@@ -1,0 +1,114 @@
+{
+  "schema_version": "0.1.0",
+  "content": {
+    "content_id": "exp.first_playable",
+    "route": {
+      "route_id": "route.tideward_shoals",
+      "legs": 2
+    },
+    "outpost": {
+      "outpost_id": "outpost.driftbreak",
+      "condition": "damaged"
+    },
+    "supply_set": {
+      "Provisions": 30,
+      "Crowns": 40
+    },
+    "overflow_cap_multiplier": 3,
+    "salvage_total": {
+      "full_success": 1400,
+      "partial_success": 400,
+      "retreat": 120,
+      "forced_withdrawal": 0
+    },
+    "guardian_primary_salvage": {
+      "gdn.raxa": "Iron",
+      "gdn.tarin": "Provisions",
+      "gdn.nova": "Crowns"
+    },
+    "outcome_readiness": {
+      "full_success": { "vessel": "ready", "crew": "ready", "guardian": "ready" },
+      "partial_success": { "vessel": "ready", "crew": "damaged", "guardian": "ready" },
+      "retreat": { "vessel": "damaged", "crew": "ready", "guardian": "ready" },
+      "forced_withdrawal": { "vessel": "damaged", "crew": "damaged", "guardian": "damaged" }
+    },
+    "event": {
+      "event_id": "evt.a4.outpost_stabilize",
+      "min_provisions_to_begin": 40
+    }
+  },
+  "value_metadata": [
+    {
+      "id": "exp.first_playable.route.legs",
+      "path": "content.route.legs",
+      "unit": "flat",
+      "gate": "A4",
+      "source_doc_section": "ALPHA_A4_EXECUTION_BRIEF v0.1 §2.5 (one short deterministic route — not the World Atlas graph)",
+      "invariant_refs": ["DC1", "DC4"]
+    },
+    {
+      "id": "exp.first_playable.supply_set.provisions",
+      "path": "content.supply_set.Provisions",
+      "unit": "per_run",
+      "gate": "A4",
+      "source_doc_section": "ALPHA_A4_EXECUTION_BRIEF v0.1 §2.4 (small deterministic supply set; refunded on cancel — OPS1)",
+      "invariant_refs": ["DC1", "DC4", "OPS1"]
+    },
+    {
+      "id": "exp.first_playable.supply_set.crowns",
+      "path": "content.supply_set.Crowns",
+      "unit": "per_run",
+      "gate": "A4",
+      "source_doc_section": "ALPHA_A4_EXECUTION_BRIEF v0.1 §2.4 (small deterministic supply set; refunded on cancel — OPS1)",
+      "invariant_refs": ["DC1", "DC4", "OPS1"]
+    },
+    {
+      "id": "exp.first_playable.overflow_cap_multiplier",
+      "path": "content.overflow_cap_multiplier",
+      "unit": "flat",
+      "gate": "A4",
+      "source_doc_section": "ALPHA_A4_EXECUTION_BRIEF v0.1 §2.12 (unsafe Overflow capped at 3× current Safe Storage capacity)",
+      "invariant_refs": ["DC1", "DC4"]
+    },
+    {
+      "id": "exp.first_playable.salvage_total.full_success",
+      "path": "content.salvage_total.full_success",
+      "unit": "per_run",
+      "gate": "A4",
+      "source_doc_section": "ALPHA_A4_EXECUTION_BRIEF v0.1 §2.9/§2.11 (recovered salvage on full success — equal total across Guardians, brief §4)",
+      "invariant_refs": ["DC1", "DC4"]
+    },
+    {
+      "id": "exp.first_playable.salvage_total.partial_success",
+      "path": "content.salvage_total.partial_success",
+      "unit": "per_run",
+      "gate": "A4",
+      "source_doc_section": "ALPHA_A4_EXECUTION_BRIEF v0.1 §2.9/§2.11 (recovered salvage on partial success)",
+      "invariant_refs": ["DC1", "DC4"]
+    },
+    {
+      "id": "exp.first_playable.salvage_total.retreat",
+      "path": "content.salvage_total.retreat",
+      "unit": "per_run",
+      "gate": "A4",
+      "source_doc_section": "ALPHA_A4_EXECUTION_BRIEF v0.1 §2.9/§2.11 (limited salvage recovered on retreat)",
+      "invariant_refs": ["DC1", "DC4"]
+    },
+    {
+      "id": "exp.first_playable.salvage_total.forced_withdrawal",
+      "path": "content.salvage_total.forced_withdrawal",
+      "unit": "per_run",
+      "gate": "A4",
+      "source_doc_section": "ALPHA_A4_EXECUTION_BRIEF v0.1 §2.9 (forced withdrawal recovers nothing by default)",
+      "invariant_refs": ["DC1", "DC4"]
+    },
+    {
+      "id": "exp.first_playable.event.min_provisions_to_begin",
+      "path": "content.event.min_provisions_to_begin",
+      "unit": "flat",
+      "gate": "A4",
+      "source_doc_section": "15_EVENT_SYSTEM_SPEC v0.2 §3 + ALPHA_A4_EXECUTION_BRIEF v0.1 §2.6 (EVT4 observable trigger: Harbor Provisions ≥ threshold to begin the objective)",
+      "invariant_refs": ["DC1", "DC4", "EVT4"]
+    }
+  ]
+}

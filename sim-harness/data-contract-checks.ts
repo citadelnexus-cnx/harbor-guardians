@@ -30,6 +30,7 @@ const SEED_SETS: ReadonlyArray<{ dir: string; payloadRoot: string }> = [
   { dir: "data/guardians", payloadRoot: "kit" },
   { dir: "data/economy", payloadRoot: "storage" },
   { dir: "data/rewards", payloadRoot: "rules" },
+  { dir: "data/expeditions", payloadRoot: "content" },
 ];
 
 const fail = (evidence: string): CheckVerdict => ({ pass: false, evidence });
@@ -53,10 +54,22 @@ function stripCommentsAndStrings(source: string): string {
 }
 
 /**
- * DC1 at A1 scope: (a) static scan — no numeric literal other than the
- * identity 0 exists in /src/sim code (every gameplay number must come from a
- * seed); (b) runtime proof — the harbor state spine's start stocks and
- * capacities are exactly the schema-validated seed's values.
+ * The only numeric literals permitted in the sim core, and why neither is a
+ * gameplay number: `0` is the identity/zero state; `1` is the structural step
+ * of a monotonic counter (the A4 expedition-stream index and completed-count
+ * bump `+ 1`). Neither is a tunable gameplay quantity — every gameplay number
+ * (stocks, caps, supplies, salvage, thresholds) still resolves to a
+ * schema-validated seed field. `1` was admitted at Alpha A4 when the first
+ * monotonic counters entered the sim core; it is NOT a licence for gameplay
+ * constants.
+ */
+const STRUCTURAL_LITERALS: ReadonlySet<string> = new Set(["0", "1"]);
+
+/**
+ * DC1: (a) static scan — no numeric literal other than the structural
+ * identity/step constants (0, 1) exists in /src/sim code (every gameplay
+ * number must come from a seed); (b) runtime proof — the harbor state spine's
+ * start stocks and capacities are exactly the schema-validated seed's values.
  */
 export function checkDc1NoMagicNumbers(): CheckVerdict {
   // (a) static scan of the sim core
@@ -65,7 +78,7 @@ export function checkDc1NoMagicNumbers(): CheckVerdict {
   for (const file of simFiles) {
     const code = stripCommentsAndStrings(readFileSync(join(SIM_CORE_DIR, file), "utf8"));
     for (const match of code.matchAll(/(?<![\w$.])\d+(?:\.\d+)?/g)) {
-      if (match[0] !== "0") offenders.push(`${SIM_CORE_DIR}/${file}: literal ${match[0]}`);
+      if (!STRUCTURAL_LITERALS.has(match[0])) offenders.push(`${SIM_CORE_DIR}/${file}: literal ${match[0]}`);
     }
   }
   if (offenders.length > 0) {
@@ -83,9 +96,10 @@ export function checkDc1NoMagicNumbers(): CheckVerdict {
     }
   }
   return pass(
-    `A1 scope: ${simFiles.length} sim-core file(s) scanned — no numeric literal besides the identity 0 ` +
-      `(comments/strings excluded); harbor spine start stocks + 3S capacities for ${CORE_RESOURCES.length} ` +
-      `CoreResources resolve verbatim to schema-validated data/economy/storage.st1.json fields. ` +
+    `A1+A4 scope: ${simFiles.length} sim-core file(s) scanned — no numeric literal besides the structural ` +
+      `constants 0 (identity) and 1 (monotonic-counter step) (comments/strings excluded); harbor spine start ` +
+      `stocks + 3S capacities for ${CORE_RESOURCES.length} CoreResources resolve verbatim to schema-validated ` +
+      `data/economy/storage.st1.json fields, and A4 expedition numbers come from the expedition seed. ` +
       `Coverage grows with each seeded system (FUTURE BUILD).`,
   );
 }
@@ -268,7 +282,7 @@ export function checkDc6CoreResourceOnly(): CheckVerdict {
   );
 }
 
-/** A structurally valid empty save blob shape for the DC6 save-schema probe (matches createEmptySaveBlob, v3). */
+/** A structurally valid empty save blob shape for the DC6 save-schema probe (matches createEmptySaveBlob, v4). */
 function minimalValidSaveShape(): Record<string, unknown> {
   const emptyBand = { safe: 0, exposed: 0 };
   return {
@@ -281,6 +295,8 @@ function minimalValidSaveShape(): Record<string, unknown> {
     claim_ledger: { packages: [], story_claims: [] },
     pending_reward_resolution: [],
     events: [],
+    expedition: { phase: "idle", active: null, next_expedition_index: 0, last_command_id: null },
+    harbor_operations: { overflow: {}, canonical_intro_consumed: false, route_anchor_operations_unlocked: false, completed_expeditions: 0 },
     system_messages: [],
     merit: {},
     guardian_bond: null,

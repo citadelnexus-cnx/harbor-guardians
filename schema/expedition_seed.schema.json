@@ -1,0 +1,312 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$ref": "#/definitions/ExpeditionSeed",
+  "definitions": {
+    "ExpeditionSeed": {
+      "type": "object",
+      "properties": {
+        "schema_version": {
+          "type": "string"
+        },
+        "content": {
+          "$ref": "#/definitions/ExpeditionContent"
+        },
+        "value_metadata": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/SeedValueMetadata"
+          }
+        }
+      },
+      "required": [
+        "schema_version",
+        "content",
+        "value_metadata"
+      ],
+      "additionalProperties": false,
+      "description": "A /data/expeditions seed file: versioned envelope (DC5) + DC4 value metadata."
+    },
+    "ExpeditionContent": {
+      "type": "object",
+      "properties": {
+        "content_id": {
+          "type": "string",
+          "description": "Version-pinned content id (brief §3) — recorded on every ActiveExpedition prepared from it."
+        },
+        "route": {
+          "$ref": "#/definitions/ExpeditionRoute"
+        },
+        "outpost": {
+          "$ref": "#/definitions/OutpostSpec"
+        },
+        "supply_set": {
+          "$ref": "#/definitions/ResourceAmounts",
+          "description": "Supplies withdrawn from the Harbor at preparation; refunded exactly on cancellation (OPS1)."
+        },
+        "overflow_cap_multiplier": {
+          "type": "number",
+          "description": "Unsafe Overflow cap = this × the current Safe capacity S, per resource (brief §2.12)."
+        },
+        "salvage_total": {
+          "$ref": "#/definitions/OutcomeSalvageTotals"
+        },
+        "guardian_primary_salvage": {
+          "$ref": "#/definitions/GuardianSalvageComposition"
+        },
+        "outcome_readiness": {
+          "$ref": "#/definitions/OutcomeReadinessMap"
+        },
+        "event": {
+          "$ref": "#/definitions/OutpostEventSpec"
+        }
+      },
+      "required": [
+        "content_id",
+        "route",
+        "outpost",
+        "supply_set",
+        "overflow_cap_multiplier",
+        "salvage_total",
+        "guardian_primary_salvage",
+        "outcome_readiness",
+        "event"
+      ],
+      "additionalProperties": false,
+      "description": "The A4 expedition content payload (DC4 metadata covers every numeric leaf under here)."
+    },
+    "ExpeditionRoute": {
+      "type": "object",
+      "properties": {
+        "route_id": {
+          "type": "string"
+        },
+        "legs": {
+          "type": "number",
+          "description": "Number of legs — a deterministic descriptive property, not a traversal graph."
+        }
+      },
+      "required": [
+        "route_id",
+        "legs"
+      ],
+      "additionalProperties": false,
+      "description": "The single short deterministic route (brief §2.5). Not the World Atlas graph (W-suite FUTURE BUILD)."
+    },
+    "OutpostSpec": {
+      "type": "object",
+      "properties": {
+        "outpost_id": {
+          "type": "string"
+        },
+        "condition": {
+          "type": "string",
+          "const": "damaged",
+          "description": "Fixed literal: the outpost is damaged (the non-combat stabilization target)."
+        }
+      },
+      "required": [
+        "outpost_id",
+        "condition"
+      ],
+      "additionalProperties": false,
+      "description": "The one damaged route-anchor outpost destination (brief §2.7)."
+    },
+    "ResourceAmounts": {
+      "type": "object",
+      "properties": {
+        "Crowns": {
+          "type": "number"
+        },
+        "Provisions": {
+          "type": "number"
+        },
+        "Iron": {
+          "type": "number"
+        },
+        "Aether": {
+          "type": "number"
+        }
+      },
+      "additionalProperties": false,
+      "description": "A partial per-CoreResource amount map (DC6: CoreResource keys only — never Merit/receipt metrics)."
+    },
+    "OutcomeSalvageTotals": {
+      "type": "object",
+      "properties": {
+        "full_success": {
+          "type": "number"
+        },
+        "partial_success": {
+          "type": "number"
+        },
+        "retreat": {
+          "type": "number"
+        },
+        "forced_withdrawal": {
+          "type": "number",
+          "description": "Forced withdrawal recovers nothing by default (may be 0)."
+        }
+      },
+      "required": [
+        "full_success",
+        "partial_success",
+        "retreat",
+        "forced_withdrawal"
+      ],
+      "additionalProperties": false,
+      "description": "Per-outcome salvage TOTAL (units). Shared across all Guardians — equal magnitude (brief §4)."
+    },
+    "GuardianSalvageComposition": {
+      "type": "object",
+      "properties": {
+        "gdn.raxa": {
+          "$ref": "#/definitions/CoreResource"
+        },
+        "gdn.tarin": {
+          "$ref": "#/definitions/CoreResource"
+        },
+        "gdn.nova": {
+          "$ref": "#/definitions/CoreResource"
+        }
+      },
+      "required": [
+        "gdn.raxa",
+        "gdn.tarin",
+        "gdn.nova"
+      ],
+      "additionalProperties": false,
+      "description": "Which CoreResource each starting Guardian's equal-total salvage arrives as (brief §4)."
+    },
+    "CoreResource": {
+      "type": "string",
+      "enum": [
+        "Crowns",
+        "Provisions",
+        "Iron",
+        "Aether"
+      ],
+      "description": "The four storable, spendable, cap-bound resources (Doc 07 §2, D26). Storage, exposed surplus, cargo, and raid loss type against CoreResource ONLY (DC6) — never StandingResource or ReceiptMetric."
+    },
+    "OutcomeReadinessMap": {
+      "type": "object",
+      "properties": {
+        "full_success": {
+          "$ref": "#/definitions/OutcomeReadiness"
+        },
+        "partial_success": {
+          "$ref": "#/definitions/OutcomeReadiness"
+        },
+        "retreat": {
+          "$ref": "#/definitions/OutcomeReadiness"
+        },
+        "forced_withdrawal": {
+          "$ref": "#/definitions/OutcomeReadiness"
+        }
+      },
+      "required": [
+        "full_success",
+        "partial_success",
+        "retreat",
+        "forced_withdrawal"
+      ],
+      "additionalProperties": false,
+      "description": "Readiness produced by each at-outpost outcome."
+    },
+    "OutcomeReadiness": {
+      "type": "object",
+      "properties": {
+        "vessel": {
+          "$ref": "#/definitions/ReadinessCondition"
+        },
+        "crew": {
+          "$ref": "#/definitions/ReadinessCondition"
+        },
+        "guardian": {
+          "$ref": "#/definitions/ReadinessCondition"
+        }
+      },
+      "required": [
+        "vessel",
+        "crew",
+        "guardian"
+      ],
+      "additionalProperties": false,
+      "description": "Vessel/crew/Guardian condition produced by one outcome (brief §2.15 bounded recovery)."
+    },
+    "ReadinessCondition": {
+      "type": "string",
+      "enum": [
+        "ready",
+        "damaged"
+      ],
+      "description": "Condition of the vessel / crew / Guardian after an outcome (brief §2.15 bounded recovery)."
+    },
+    "OutpostEventSpec": {
+      "type": "object",
+      "properties": {
+        "event_id": {
+          "type": "string"
+        },
+        "min_provisions_to_begin": {
+          "type": "number"
+        }
+      },
+      "required": [
+        "event_id",
+        "min_provisions_to_begin"
+      ],
+      "additionalProperties": false,
+      "description": "The bounded at-outpost event spec (EVT1–EVT4 reuse, brief §2.6). The sim builds a schema-shaped `Event` from these values; `min_provisions_to_begin` is the seeded threshold of a real EVT4 observable trigger (harbor Provisions ≥ threshold) — the only way the outpost objective becomes eligible."
+    },
+    "SeedValueMetadata": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "path": {
+          "type": "string"
+        },
+        "unit": {
+          "$ref": "#/definitions/Unit"
+        },
+        "gate": {
+          "type": "string"
+        },
+        "source_doc_section": {
+          "type": "string"
+        },
+        "invariant_refs": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "required": [
+        "id",
+        "path",
+        "unit",
+        "gate",
+        "source_doc_section",
+        "invariant_refs"
+      ],
+      "additionalProperties": false,
+      "description": "DC4 unit-requirement metadata for one numeric seed value. `path` is the dot-path of the numeric field under the seed's payload root (`kit` for guardian seeds, `storage` for resource-storage seeds); the validator enforces that every numeric leaf has exactly one entry and every entry resolves to a numeric leaf."
+    },
+    "Unit": {
+      "type": "string",
+      "enum": [
+        "per_pulse",
+        "per_minute",
+        "per_world_day",
+        "per_run",
+        "per_quest",
+        "flat"
+      ],
+      "description": "Value-cadence vocabulary for seed metadata (Doc 07 §2 / §1.2, DC4)."
+    }
+  },
+  "$id": "hg.expedition_seed",
+  "$comment": "GENERATED from src/contracts/expedition-seed.ts (D39) — do not edit by hand; run `pnpm run schema:generate`."
+}

@@ -133,7 +133,7 @@ const problem = (msg: string) => {
   console.error(`FAIL  ${msg}`);
 };
 
-console.log(`sim-harness A3 batch — seed ${seed}\n`);
+console.log(`sim-harness A4 batch — seed ${seed}\n`);
 
 // 1. Registry integrity
 const integrityProblems = verifyRegistryIntegrity();
@@ -238,11 +238,11 @@ const personaIds = personas.map((p) =>
 );
 const personasWithBehavior = personas.filter((p) => p.run !== undefined);
 if (personasWithBehavior.length > 0) {
-  // Through A3 no persona may claim a behavior model (scope guard, CLAUDE.md
-  // §7; A3 authorizes the event-lifecycle skeleton only — no gameplay loop,
-  // so behavior models remain unauthorized).
+  // Through A4 no persona may claim a behavior model (scope guard, CLAUDE.md
+  // §7; A4 authorizes only the bounded first-playable expedition loop — the
+  // broad sim-agent behavior models remain FUTURE BUILD and unauthorized).
   problem(
-    `persona matrix: ${personasWithBehavior.map((p) => p.id).join(", ")} declare behavior models — not authorized at M0/A0/A1/A2/A3`,
+    `persona matrix: ${personasWithBehavior.map((p) => p.id).join(", ")} declare behavior models — not authorized at M0/A0/A1/A2/A3/A4`,
   );
 } else {
   console.log(`ok    persona matrix declared (hooks only, no behavior models): ${personaIds.join(" · ")}`);
@@ -258,7 +258,7 @@ const registryCounts = Object.fromEntries(
 
 const report: HarnessReport = {
   harness: "harbor-guardians sim-harness",
-  milestone: "A3",
+  milestone: "A4",
   seed,
   registry_counts: registryCounts,
   total_invariants: INVARIANT_REGISTRY.length,
@@ -277,7 +277,7 @@ const implementedIds = batch.invariant_results.filter((r) => r.outcome === "PASS
 const stubTotal = batch.invariant_results.filter((r) => r.outcome === "STUB_FAIL_LOUD_VERIFIED").length;
 console.log(
   batchGreen
-    ? `\nA3 BATCH GREEN — ${INVARIANT_REGISTRY.length} invariants registered: ${stubTotal} fail-loud stubs (no unimplemented invariant is claimed as passing) + ${implementedIds.length} implemented and proven green (${implementedIds.join(", ") || "none"}); seed gate + determinism proof passed (seed ${seed}).`
-    : `\nA3 BATCH RED — see failures above (seed ${seed}).`,
+    ? `\nA4 BATCH GREEN — ${INVARIANT_REGISTRY.length} invariants registered: ${stubTotal} fail-loud stubs (no unimplemented invariant is claimed as passing) + ${implementedIds.length} implemented and proven green (${implementedIds.join(", ") || "none"}); seed gate + determinism proof passed (seed ${seed}).`
+    : `\nA4 BATCH RED — see failures above (seed ${seed}).`,
 );
 process.exit(batchGreen ? 0 : 1);

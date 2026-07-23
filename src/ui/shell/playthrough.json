@@ -1,0 +1,632 @@
+{
+  "content_id": "exp.first_playable",
+  "outpost_id": "outpost.driftbreak",
+  "route_id": "route.tideward_shoals",
+  "runs": [
+    {
+      "guardian_id": "gdn.raxa",
+      "steps": [
+        {
+          "cargo_aboard": {},
+          "command": "prepare",
+          "harbor": {
+            "Aether": {
+              "exposed": 0,
+              "safe": 0
+            },
+            "Crowns": {
+              "exposed": 0,
+              "safe": 160
+            },
+            "Iron": {
+              "exposed": 0,
+              "safe": 100
+            },
+            "Provisions": {
+              "exposed": 0,
+              "safe": 120
+            }
+          },
+          "note": "Harbor need after Theo's funeral: prepare Theo's salvage vessel; supplies withdrawn onto the vessel.",
+          "overflow": {},
+          "phase": "preparing"
+        },
+        {
+          "cargo_aboard": {},
+          "command": "dispatch",
+          "harbor": {
+            "Aether": {
+              "exposed": 0,
+              "safe": 0
+            },
+            "Crowns": {
+              "exposed": 0,
+              "safe": 160
+            },
+            "Iron": {
+              "exposed": 0,
+              "safe": 100
+            },
+            "Provisions": {
+              "exposed": 0,
+              "safe": 120
+            }
+          },
+          "note": "Dispatch along the route; supplies are spent.",
+          "overflow": {},
+          "phase": "en_route"
+        },
+        {
+          "cargo_aboard": {},
+          "command": "arrive",
+          "harbor": {
+            "Aether": {
+              "exposed": 0,
+              "safe": 0
+            },
+            "Crowns": {
+              "exposed": 0,
+              "safe": 160
+            },
+            "Iron": {
+              "exposed": 0,
+              "safe": 100
+            },
+            "Provisions": {
+              "exposed": 0,
+              "safe": 120
+            }
+          },
+          "note": "Arrive at the damaged route-anchor outpost; the stabilization objective begins (EVT4 trigger met).",
+          "overflow": {},
+          "phase": "at_outpost"
+        },
+        {
+          "cargo_aboard": {
+            "Iron": 1400
+          },
+          "command": "resolve",
+          "harbor": {
+            "Aether": {
+              "exposed": 0,
+              "safe": 0
+            },
+            "Crowns": {
+              "exposed": 0,
+              "safe": 160
+            },
+            "Iron": {
+              "exposed": 0,
+              "safe": 100
+            },
+            "Provisions": {
+              "exposed": 0,
+              "safe": 120
+            }
+          },
+          "note": "Full success: recovered salvage loaded aboard (equal total, this Guardian's resource).",
+          "overflow": {},
+          "phase": "returning"
+        },
+        {
+          "cargo_aboard": {
+            "Iron": 1400
+          },
+          "command": "dock",
+          "harbor": {
+            "Aether": {
+              "exposed": 0,
+              "safe": 0
+            },
+            "Crowns": {
+              "exposed": 0,
+              "safe": 160
+            },
+            "Iron": {
+              "exposed": 0,
+              "safe": 100
+            },
+            "Provisions": {
+              "exposed": 0,
+              "safe": 120
+            }
+          },
+          "note": "Return and dock; review the result.",
+          "overflow": {},
+          "phase": "docked"
+        },
+        {
+          "cargo_aboard": {},
+          "command": "unload",
+          "harbor": {
+            "Aether": {
+              "exposed": 0,
+              "safe": 0
+            },
+            "Crowns": {
+              "exposed": 0,
+              "safe": 160
+            },
+            "Iron": {
+              "exposed": 600,
+              "safe": 300
+            },
+            "Provisions": {
+              "exposed": 0,
+              "safe": 120
+            }
+          },
+          "note": "Unload: Safe Storage first, then unsafe Overflow (capped at 3× Safe) — every unit conserved.",
+          "overflow": {
+            "Iron": 600
+          },
+          "phase": "docked"
+        },
+        {
+          "cargo_aboard": {},
+          "command": "complete",
+          "harbor": {
+            "Aether": {
+              "exposed": 0,
+              "safe": 0
+            },
+            "Crowns": {
+              "exposed": 0,
+              "safe": 160
+            },
+            "Iron": {
+              "exposed": 600,
+              "safe": 300
+            },
+            "Provisions": {
+              "exposed": 0,
+              "safe": 120
+            }
+          },
+          "note": "Complete: route-anchor operations unlocked; ready to repeat.",
+          "overflow": {
+            "Iron": 600
+          },
+          "phase": "idle"
+        }
+      ],
+      "title": "Full success — gdn.raxa"
+    },
+    {
+      "guardian_id": "gdn.tarin",
+      "steps": [
+        {
+          "cargo_aboard": {},
+          "command": "prepare",
+          "harbor": {
+            "Aether": {
+              "exposed": 0,
+              "safe": 0
+            },
+            "Crowns": {
+              "exposed": 0,
+              "safe": 160
+            },
+            "Iron": {
+              "exposed": 0,
+              "safe": 100
+            },
+            "Provisions": {
+              "exposed": 0,
+              "safe": 120
+            }
+          },
+          "note": "Harbor need after Theo's funeral: prepare Theo's salvage vessel; supplies withdrawn onto the vessel.",
+          "overflow": {},
+          "phase": "preparing"
+        },
+        {
+          "cargo_aboard": {},
+          "command": "dispatch",
+          "harbor": {
+            "Aether": {
+              "exposed": 0,
+              "safe": 0
+            },
+            "Crowns": {
+              "exposed": 0,
+              "safe": 160
+            },
+            "Iron": {
+              "exposed": 0,
+              "safe": 100
+            },
+            "Provisions": {
+              "exposed": 0,
+              "safe": 120
+            }
+          },
+          "note": "Dispatch along the route; supplies are spent.",
+          "overflow": {},
+          "phase": "en_route"
+        },
+        {
+          "cargo_aboard": {},
+          "command": "arrive",
+          "harbor": {
+            "Aether": {
+              "exposed": 0,
+              "safe": 0
+            },
+            "Crowns": {
+              "exposed": 0,
+              "safe": 160
+            },
+            "Iron": {
+              "exposed": 0,
+              "safe": 100
+            },
+            "Provisions": {
+              "exposed": 0,
+              "safe": 120
+            }
+          },
+          "note": "Arrive at the damaged route-anchor outpost; the stabilization objective begins (EVT4 trigger met).",
+          "overflow": {},
+          "phase": "at_outpost"
+        },
+        {
+          "cargo_aboard": {
+            "Provisions": 1400
+          },
+          "command": "resolve",
+          "harbor": {
+            "Aether": {
+              "exposed": 0,
+              "safe": 0
+            },
+            "Crowns": {
+              "exposed": 0,
+              "safe": 160
+            },
+            "Iron": {
+              "exposed": 0,
+              "safe": 100
+            },
+            "Provisions": {
+              "exposed": 0,
+              "safe": 120
+            }
+          },
+          "note": "Full success: recovered salvage loaded aboard (equal total, this Guardian's resource).",
+          "overflow": {},
+          "phase": "returning"
+        },
+        {
+          "cargo_aboard": {
+            "Provisions": 1400
+          },
+          "command": "dock",
+          "harbor": {
+            "Aether": {
+              "exposed": 0,
+              "safe": 0
+            },
+            "Crowns": {
+              "exposed": 0,
+              "safe": 160
+            },
+            "Iron": {
+              "exposed": 0,
+              "safe": 100
+            },
+            "Provisions": {
+              "exposed": 0,
+              "safe": 120
+            }
+          },
+          "note": "Return and dock; review the result.",
+          "overflow": {},
+          "phase": "docked"
+        },
+        {
+          "cargo_aboard": {},
+          "command": "unload",
+          "harbor": {
+            "Aether": {
+              "exposed": 0,
+              "safe": 0
+            },
+            "Crowns": {
+              "exposed": 0,
+              "safe": 160
+            },
+            "Iron": {
+              "exposed": 0,
+              "safe": 100
+            },
+            "Provisions": {
+              "exposed": 600,
+              "safe": 300
+            }
+          },
+          "note": "Unload: Safe Storage first, then unsafe Overflow (capped at 3× Safe) — every unit conserved.",
+          "overflow": {
+            "Provisions": 620
+          },
+          "phase": "docked"
+        },
+        {
+          "cargo_aboard": {},
+          "command": "complete",
+          "harbor": {
+            "Aether": {
+              "exposed": 0,
+              "safe": 0
+            },
+            "Crowns": {
+              "exposed": 0,
+              "safe": 160
+            },
+            "Iron": {
+              "exposed": 0,
+              "safe": 100
+            },
+            "Provisions": {
+              "exposed": 600,
+              "safe": 300
+            }
+          },
+          "note": "Complete: route-anchor operations unlocked; ready to repeat.",
+          "overflow": {
+            "Provisions": 620
+          },
+          "phase": "idle"
+        }
+      ],
+      "title": "Full success — gdn.tarin"
+    },
+    {
+      "guardian_id": "gdn.nova",
+      "steps": [
+        {
+          "cargo_aboard": {},
+          "command": "prepare",
+          "harbor": {
+            "Aether": {
+              "exposed": 0,
+              "safe": 0
+            },
+            "Crowns": {
+              "exposed": 0,
+              "safe": 160
+            },
+            "Iron": {
+              "exposed": 0,
+              "safe": 100
+            },
+            "Provisions": {
+              "exposed": 0,
+              "safe": 120
+            }
+          },
+          "note": "Harbor need after Theo's funeral: prepare Theo's salvage vessel; supplies withdrawn onto the vessel.",
+          "overflow": {},
+          "phase": "preparing"
+        },
+        {
+          "cargo_aboard": {},
+          "command": "dispatch",
+          "harbor": {
+            "Aether": {
+              "exposed": 0,
+              "safe": 0
+            },
+            "Crowns": {
+              "exposed": 0,
+              "safe": 160
+            },
+            "Iron": {
+              "exposed": 0,
+              "safe": 100
+            },
+            "Provisions": {
+              "exposed": 0,
+              "safe": 120
+            }
+          },
+          "note": "Dispatch along the route; supplies are spent.",
+          "overflow": {},
+          "phase": "en_route"
+        },
+        {
+          "cargo_aboard": {},
+          "command": "arrive",
+          "harbor": {
+            "Aether": {
+              "exposed": 0,
+              "safe": 0
+            },
+            "Crowns": {
+              "exposed": 0,
+              "safe": 160
+            },
+            "Iron": {
+              "exposed": 0,
+              "safe": 100
+            },
+            "Provisions": {
+              "exposed": 0,
+              "safe": 120
+            }
+          },
+          "note": "Arrive at the damaged route-anchor outpost; the stabilization objective begins (EVT4 trigger met).",
+          "overflow": {},
+          "phase": "at_outpost"
+        },
+        {
+          "cargo_aboard": {
+            "Crowns": 1400
+          },
+          "command": "resolve",
+          "harbor": {
+            "Aether": {
+              "exposed": 0,
+              "safe": 0
+            },
+            "Crowns": {
+              "exposed": 0,
+              "safe": 160
+            },
+            "Iron": {
+              "exposed": 0,
+              "safe": 100
+            },
+            "Provisions": {
+              "exposed": 0,
+              "safe": 120
+            }
+          },
+          "note": "Full success: recovered salvage loaded aboard (equal total, this Guardian's resource).",
+          "overflow": {},
+          "phase": "returning"
+        },
+        {
+          "cargo_aboard": {
+            "Crowns": 1400
+          },
+          "command": "dock",
+          "harbor": {
+            "Aether": {
+              "exposed": 0,
+              "safe": 0
+            },
+            "Crowns": {
+              "exposed": 0,
+              "safe": 160
+            },
+            "Iron": {
+              "exposed": 0,
+              "safe": 100
+            },
+            "Provisions": {
+              "exposed": 0,
+              "safe": 120
+            }
+          },
+          "note": "Return and dock; review the result.",
+          "overflow": {},
+          "phase": "docked"
+        },
+        {
+          "cargo_aboard": {},
+          "command": "unload",
+          "harbor": {
+            "Aether": {
+              "exposed": 0,
+              "safe": 0
+            },
+            "Crowns": {
+              "exposed": 1000,
+              "safe": 500
+            },
+            "Iron": {
+              "exposed": 0,
+              "safe": 100
+            },
+            "Provisions": {
+              "exposed": 0,
+              "safe": 120
+            }
+          },
+          "note": "Unload: Safe Storage first, then unsafe Overflow (capped at 3× Safe) — every unit conserved.",
+          "overflow": {
+            "Crowns": 60
+          },
+          "phase": "docked"
+        },
+        {
+          "cargo_aboard": {},
+          "command": "complete",
+          "harbor": {
+            "Aether": {
+              "exposed": 0,
+              "safe": 0
+            },
+            "Crowns": {
+              "exposed": 1000,
+              "safe": 500
+            },
+            "Iron": {
+              "exposed": 0,
+              "safe": 100
+            },
+            "Provisions": {
+              "exposed": 0,
+              "safe": 120
+            }
+          },
+          "note": "Complete: route-anchor operations unlocked; ready to repeat.",
+          "overflow": {
+            "Crowns": 60
+          },
+          "phase": "idle"
+        }
+      ],
+      "title": "Full success — gdn.nova"
+    },
+    {
+      "guardian_id": "gdn.nova",
+      "steps": [
+        {
+          "cargo_aboard": {},
+          "command": "prepare",
+          "harbor": {
+            "Aether": {
+              "exposed": 0,
+              "safe": 0
+            },
+            "Crowns": {
+              "exposed": 0,
+              "safe": 160
+            },
+            "Iron": {
+              "exposed": 0,
+              "safe": 100
+            },
+            "Provisions": {
+              "exposed": 0,
+              "safe": 120
+            }
+          },
+          "note": "Prepare: supplies withdrawn onto the vessel.",
+          "overflow": {},
+          "phase": "preparing"
+        },
+        {
+          "cargo_aboard": {},
+          "command": "cancel",
+          "harbor": {
+            "Aether": {
+              "exposed": 0,
+              "safe": 0
+            },
+            "Crowns": {
+              "exposed": 0,
+              "safe": 200
+            },
+            "Iron": {
+              "exposed": 0,
+              "safe": 100
+            },
+            "Provisions": {
+              "exposed": 0,
+              "safe": 150
+            }
+          },
+          "note": "Cancel before dispatch: supplies refunded directly to Harbor stock (Safe→Exposed) — never lost, never to the Ledger (OPS1).",
+          "overflow": {},
+          "phase": "idle"
+        }
+      ],
+      "title": "Cancellation (OPS1 refund)"
+    }
+  ],
+  "seed": 20260723
+}
+
