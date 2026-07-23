@@ -11,7 +11,7 @@ Alpha-phase planning documents. Governing rules: [`CLAUDE.md`](../../CLAUDE.md) 
 | **Alpha A1** — Minimal Harbor State and Resource Spine | CLOSED — owner authorization 2026-07-16; harbor spine + DC1/DC4/DC5/DC6 + stocked S5 (PR #15) |
 | **Alpha A2** — Claim Ledger and Reward Routing | CLOSED — owner authorization 2026-07-17; ledger spine + L1/L5/L6/L7/L11/L14 + save v1→v2 (PR #16) |
 | **Alpha A3** — Expedition and Event Skeleton (Option A: lifecycle mechanics only) | CLOSED — owner authorization 2026-07-18; EVT1–EVT4 + save v2→v3 + integrity corrections (PR #18) |
-| **Alpha A4** — Bounded First Playable Expedition Loop (Option A only) | REVIEW / ACCEPTANCE PASSED — PENDING PR PROMOTION AND MERGE — owner authorization 2026-07-23; scope in [`ALPHA_A4_EXECUTION_BRIEF_v0.1.md`](ALPHA_A4_EXECUTION_BRIEF_v0.1.md). Implementation complete on `alpha/a4-first-playable-expedition-loop` (OPS1 converted; save v4; 132/17/115; interactive Windows player flow + atomic persistence bridge per the PR #21 review); draft PR #21 open, not yet merged. Owner-executed interactive Windows GUI acceptance returned **PASS (2026-07-23)** across scenarios A–H and destructive-discard safety ([`ALPHA_A4_WINDOWS_ACCEPTANCE.md`](ALPHA_A4_WINDOWS_ACCEPTANCE.md)). Not CLOSED until owner-approved merge and post-merge reconciliation. |
+| **Alpha A4** — Bounded First Playable Expedition Loop (Option A only) | **CLOSED — OPTION A** — owner authorization 2026-07-23 (auth-record PR #20); implementation PR #21 squash-merged to `main` as `08f84deffd68a0b7eeeff47ab84612d877708d60`; closure date 2026-07-23. Delivered the bounded loop with OPS1 converted, save schema v4, and an interactive Windows player flow + atomic persistence bridge (per the PR #21 review). Invariant state **132 registered / 17 implemented / 115 fail-loud**; save **v4**. Owner-executed interactive Windows GUI acceptance returned **PASS (2026-07-23)** across scenarios A–H and destructive-discard safety ([`ALPHA_A4_WINDOWS_ACCEPTANCE.md`](ALPHA_A4_WINDOWS_ACCEPTANCE.md)). Next phase **NOT AUTHORIZED**. |
 | **Alpha A5+** | **NOT AUTHORIZED** — no scope, brief, or implementation permission exists |
 
 ## Closed Alpha A3 boundary
@@ -29,9 +29,9 @@ Alpha A3 Option A delivered only the **Expedition and Event Skeleton lifecycle m
 
 PR #18 squash-merged to `main` as `245b73215cf9b098b8f54eaa559dabc1b49703d4`.
 
-## Authorized Alpha A4 boundary (Option A only)
+## Closed Alpha A4 boundary (Option A only)
 
-On **2026-07-23** the owner authorized **Alpha A4 Option A — Bounded First Playable Expedition Loop** (public-safe scope in [`ALPHA_A4_EXECUTION_BRIEF_v0.1.md`](ALPHA_A4_EXECUTION_BRIEF_v0.1.md); baseline `a08b4ad`). A4 is bounded to exactly one canonical, repeatable, deterministic, save-safe early-game Harbor → route-anchor-outpost → Harbor loop, with:
+On **2026-07-23** the owner authorized **Alpha A4 Option A — Bounded First Playable Expedition Loop** (public-safe scope in [`ALPHA_A4_EXECUTION_BRIEF_v0.1.md`](ALPHA_A4_EXECUTION_BRIEF_v0.1.md); baseline `a08b4ad`), and on the same date it closed — implementation PR #21 squash-merged to `main` as `08f84deffd68a0b7eeeff47ab84612d877708d60`, owner interactive Windows acceptance PASS, invariant state 132/17/115, save v4. A4 was bounded to exactly one canonical, repeatable, deterministic, save-safe early-game Harbor → route-anchor-outpost → Harbor loop, with:
 
 - Theo's inherited salvage vessel and a fixed group (player, selected starting Guardian, Morra Dalmere, any approved fixed support character) — no selectable party, no formations.
 - A small deterministic supply set, one short route, bounded reuse of the existing EVT1–EVT4 lifecycle, one damaged route-anchor outpost, and a non-combat stabilization/salvage objective.
@@ -42,7 +42,7 @@ On **2026-07-23** the owner authorized **Alpha A4 Option A — Bounded First Pla
 - A minimal Alpha-quality Windows desktop interface; save v4 + deterministic v3→v4 migration **only if technically required** (assess v3 first).
 - Starting Guardians (Raxa, Tarin, Nova) as **equivalent sidegrades only** — no superior rewards, guaranteed success, leveling, evolution, equipment, combat powers, bond tree, or roster.
 
-Convert only fully proven A4-scoped invariants; everything else stays fail-loud. Implementation runs on branch `alpha/a4-first-playable-expedition-loop`, is **gated on the merge of the authorization-record PR** that lands the A4 brief and the CLAUDE.md §7 / README / progress-ledger amendments, ships as a draft PR only, and A4 closes only after owner-approved merge.
+Only fully proven A4-scoped invariants were converted (OPS1 the sole conversion; S5/S7 extended); everything else stays fail-loud. The work ran on branch `alpha/a4-first-playable-expedition-loop` and shipped as draft PR #21, which — after independent review corrections (interactive player flow, blocked-unloading recovery, destructive-discard confirmation) and owner interactive Windows acceptance — was owner-promoted and squash-merged. **A4 is closed; no next Alpha phase is authorized.**
 
 ## Still outside the boundary
 
@@ -58,4 +58,5 @@ Any phase beyond this A4 boundary requires a separate owner decision, a bounded 
 | [`ALPHA_A1_EXECUTION_BRIEF_v0.1.md`](ALPHA_A1_EXECUTION_BRIEF_v0.1.md) | The A1 scope, deliverables, hard limits, and exit condition (closed) |
 | [`ALPHA_A2_EXECUTION_BRIEF_v0.1.md`](ALPHA_A2_EXECUTION_BRIEF_v0.1.md) | The A2 scope, deliverables, hard limits, and exit condition (closed) |
 | [`ALPHA_A3_EXECUTION_BRIEF_v0.1.md`](ALPHA_A3_EXECUTION_BRIEF_v0.1.md) | The A3 Option A scope, deliverables, hard limits, and exit condition (closed) |
-| [`ALPHA_A4_EXECUTION_BRIEF_v0.1.md`](ALPHA_A4_EXECUTION_BRIEF_v0.1.md) | The A4 Option A scope, deliverables, hard limits, and exit condition (authorized; implementation gated on the authorization-record PR merge) |
+| [`ALPHA_A4_EXECUTION_BRIEF_v0.1.md`](ALPHA_A4_EXECUTION_BRIEF_v0.1.md) | The A4 Option A scope, deliverables, hard limits, and exit condition (closed; PR #21 merged as `08f84de`) |
+| [`ALPHA_A4_WINDOWS_ACCEPTANCE.md`](ALPHA_A4_WINDOWS_ACCEPTANCE.md) | Owner-executed interactive Windows desktop acceptance evidence for the A4 loop (PASS, 2026-07-23) |
