@@ -15,6 +15,7 @@ const invoke = tauri && tauri.core ? tauri.core.invoke : null;
 
 let seeds = null;
 let controller = null;
+let currentActions = []; // the actions from the last render — reused by keyboard so a key and a click share one command id
 
 function el(tag, className, text) {
   const node = document.createElement(tag);
@@ -93,6 +94,7 @@ function renderActions() {
   const wrap = document.getElementById("actions");
   wrap.textContent = "";
   const actions = controller.availableActions();
+  currentActions = actions;
   if (actions.length === 0) {
     wrap.appendChild(el("p", "hint", "No actions in this phase."));
     return;
@@ -131,12 +133,11 @@ function render() {
 document.addEventListener("keydown", (e) => {
   if (!controller) return;
   const n = Number(e.key);
-  if (Number.isInteger(n) && n >= 1) {
-    const actions = controller.availableActions();
-    if (n <= actions.length) {
-      perform(actions[n - 1]);
-      e.preventDefault();
-    }
+  // Reuse the rendered action objects so a key press and a click share one
+  // command id (jettison stays double-activation safe).
+  if (Number.isInteger(n) && n >= 1 && n <= currentActions.length) {
+    perform(currentActions[n - 1]);
+    e.preventDefault();
   }
 });
 

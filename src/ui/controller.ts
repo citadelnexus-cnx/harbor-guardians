@@ -28,6 +28,7 @@ import type { CoreResource } from "../contracts/enums.js";
 import type {
   ExpeditionCommand,
   ExpeditionOutcome,
+  JettisonBand,
   ResourceAmounts,
   StartingGuardianId,
 } from "../contracts/expedition.js";
@@ -42,7 +43,9 @@ import {
   createExpeditionState,
   createHarborOperationsState,
   ExpeditionInvariantError,
+  isUnloadBlocked,
   STARTING_GUARDIANS,
+  unloadRoom,
   type CommandResult,
   type ExpeditionDomain,
 } from "../sim/expedition.js";
@@ -67,6 +70,10 @@ export type UiActionKind =
   | "resolve" // choose an outcome at the outpost
   | "dock" // return + dock
   | "unload" // unload one pass (Safe Storage → Overflow → aboard)
+  | "manage" // blocked unload → enter the Harbor-management view (UI-local)
+  | "jettison" // discard a bounded quantity from a band to free capacity
+  | "resume_unload" // leave management + unload what now fits
+  | "back" // leave management without unloading
   | "complete" // finish (→ recovering or idle)
   | "recover"; // clear damage → idle
 
@@ -77,6 +84,12 @@ export interface UiAction {
   /** For "prepare": the Guardian to prepare with. For "resolve": the outcome. */
   guardian_id?: StartingGuardianId;
   outcome?: ExpeditionOutcome;
+  /** For "jettison": which resource/band to discard, and how much. */
+  resource?: CoreResource;
+  band?: JettisonBand;
+  amount?: number;
+  /** A stable command id for repeatable-in-place actions (jettison) so a double-click is an idempotent no-op. */
+  command_id?: string;
 }
 
 /** A renderable snapshot of the whole player-visible state. */
@@ -86,14 +99,19 @@ export interface UiView {
   content_id: string;
   route_id: string;
   outpost_id: string;
-  /** Harbor Safe/Exposed per resource. */
-  harbor: Record<CoreResource, { safe: number; exposed: number; safe_capacity: number; total_capacity: number }>;
+  /** Harbor Safe/Exposed per resource, with the free room left in each unload tier. */
+  harbor: Record<
+    CoreResource,
+    { safe: number; exposed: number; safe_capacity: number; total_capacity: number; storage_room: number; overflow_room: number }
+  >;
   /** Unsafe Overflow holdings per resource + the per-resource cap. */
   overflow: ResourceAmounts;
   overflow_cap: Record<CoreResource, number>;
   cargo_aboard: ResourceAmounts;
-  /** True when the last unload left material aboard (both Safe Storage and Overflow were full). */
+  /** True (derived from persisted state) when cargo is aboard and no further unload can make progress. */
   unload_blocked: boolean;
+  /** True when the UI is in the bounded Harbor-management (free-capacity) view. */
+  management_mode: boolean;
   vessel_condition: string | null;
   crew_condition: string | null;
   guardian_condition: string | null;
@@ -112,6 +130,9 @@ export interface PerformResult {
   ok: boolean;
   error?: string;
   view: UiView;
+  /** False when the action was an idempotent duplicate of the last applied command (double-click safe). */
+  applied?: boolean;
+  idempotent?: boolean;
 }
 
 /** Alpha acceptance scenario the UI can start from (real transitions only — no cheats). */
@@ -136,6 +157,10 @@ function guardianLabel(id: StartingGuardianId): string {
   return id === "gdn.raxa" ? "Raxa" : id === "gdn.tarin" ? "Tarin" : "Nova";
 }
 
+function bandLabel(band: JettisonBand): string {
+  return band === "overflow" ? "unsafe Overflow" : band === "exposed" ? "Exposed storage" : "Safe Storage";
+}
+
 /**
  * The pure interactive controller. Holds the authoritative ExpeditionDomain and
  * a template SaveBlob (for the non-expedition blocks, preserved across
@@ -149,7 +174,8 @@ export class ExpeditionController {
   private readonly storageSeed: ResourceStorageSeed;
   private pendingGuardian: StartingGuardianId | null = null;
   private message = "New game. Start an expedition from the Harbor.";
-  private lastUnloadBlocked = false;
+  /** True while the UI is in the bounded Harbor-management (free-capacity) view. */
+  private managementMode = false;
   /** Monotonic command counter → stable, unique command ids (duplicate-resistant). */
   private commandCounter = 0;
 
@@ -231,18 +257,19 @@ export class ExpeditionController {
       result = applyCommand(this.domain, command, this.ctx);
     } catch (err) {
       const message = err instanceof ExpeditionInvariantError ? err.message : String(err);
-      return { ok: false, error: message, view: this.view() };
+      return { ok: false, error: message, view: this.view(), applied: false, idempotent: false };
     }
     this.domain = result.domain;
-    if (command.kind === "unload") {
-      this.lastUnloadBlocked = result.unload ? !result.unload.fully_unloaded : false;
+    if (result.idempotent) {
+      // A re-submitted (duplicate) command — nothing changed. Keep the message.
+      return { ok: true, view: this.view(), applied: false, idempotent: true };
     }
     if (command.kind === "cancel" && result.cancellation_blocked) {
       this.message = "Cancellation blocked: refunding the supplies would exceed the 3S hard stop. Supplies are preserved on the vessel (OPS1).";
-      return { ok: true, view: this.view() };
+      return { ok: true, view: this.view(), applied: true, idempotent: false };
     }
     this.message = note;
-    return { ok: true, view: this.view() };
+    return { ok: true, view: this.view(), applied: true, idempotent: false };
   }
 
   /** UI-local Guardian selection (no command until `prepare`). */
@@ -278,10 +305,14 @@ export class ExpeditionController {
         return [{ kind: "dock", label: "Return and dock at the Harbor" }];
       case "docked": {
         const cargo = Object.keys(this.domain.expedition.active?.cargo_aboard ?? {}).length > 0;
-        const actions: UiAction[] = [];
-        if (cargo) actions.push({ kind: "unload", label: this.lastUnloadBlocked ? "Unload again (blocked — free space first)" : "Unload recovered materials" });
-        else actions.push({ kind: "complete", label: "Complete the expedition" });
-        return actions;
+        if (!cargo) return [{ kind: "complete", label: "Complete the expedition" }];
+        if (this.managementMode) return this.managementActions();
+        if (isUnloadBlocked(this.domain, this.ctx.content)) {
+          // Blocked soft-lock recovery: offer the Harbor-management continuation
+          // (never a dead-end "unload again" that can't progress).
+          return [{ kind: "manage", label: "Free capacity (manage Harbor storage)" }];
+        }
+        return [{ kind: "unload", label: "Unload recovered materials" }];
       }
       case "recovering":
         return [{ kind: "recover", label: "Perform bounded recovery (restore readiness)" }];
@@ -297,6 +328,46 @@ export class ExpeditionController {
       label: labelOutcome(o),
       outcome: o,
     }));
+  }
+
+  /**
+   * Harbor-management actions (blocked-unload recovery): for each blocking
+   * resource still aboard, offer a bounded, explicit DISCARD from a band that
+   * holds stock (unsafe Overflow first, then Exposed, then Safe) to free
+   * capacity — plus Resume unloading and Back. Each discard carries a STABLE
+   * command id so a double-click is an idempotent no-op (never a double
+   * discard). Cargo is never touched here; it stays aboard, preserved.
+   */
+  private managementActions(): UiAction[] {
+    const actions: UiAction[] = [];
+    const active = this.domain.expedition.active;
+    if (active) {
+      for (const resource of CORE_RESOURCES) {
+        const aboard = active.cargo_aboard[resource] ?? 0;
+        if (aboard <= 0) continue;
+        const band = this.domain.harbor.resources[resource];
+        const held: Array<[JettisonBand, number]> = [
+          ["overflow", this.domain.harbor_operations.overflow[resource] ?? 0],
+          ["exposed", band.exposed],
+          ["safe", band.safe],
+        ];
+        for (const [bandName, amount] of held) {
+          if (amount <= 0) continue;
+          const discard = Math.min(aboard, amount);
+          actions.push({
+            kind: "jettison",
+            label: `Discard ${discard} ${resource} from ${bandLabel(bandName)} (free capacity)`,
+            command_id: this.nextCommandId("jettison"),
+            resource,
+            band: bandName,
+            amount: discard,
+          });
+        }
+      }
+    }
+    actions.push({ kind: "resume_unload", label: "Resume unloading" });
+    actions.push({ kind: "back", label: "Back to dock" });
+    return actions;
   }
 
   /** Perform an offered action; rejects anything not currently available. */
@@ -324,6 +395,26 @@ export class ExpeditionController {
         return this.apply({ command_id: this.nextCommandId("dock"), kind: "dock" }, "Docked at the Harbor. Review and unload recovered materials.");
       case "unload":
         return this.apply({ command_id: this.nextCommandId("unload"), kind: "unload" }, "Unloaded: Safe Storage first, then unsafe Overflow — every unit conserved.");
+      case "manage":
+        this.managementMode = true;
+        this.message = "Harbor management: discard a bounded quantity to free capacity, then resume unloading. Cargo stays aboard, preserved.";
+        return { ok: true, view: this.view(), applied: true, idempotent: false };
+      case "jettison": {
+        if (!action.resource || !action.band || action.amount === undefined) {
+          return { ok: false, error: "incomplete jettison action", view: this.view(), applied: false, idempotent: false };
+        }
+        return this.apply(
+          { command_id: action.command_id ?? this.nextCommandId("jettison"), kind: "jettison", resource: action.resource, band: action.band, amount: action.amount },
+          `Discarded ${action.amount} ${action.resource} from ${bandLabel(action.band)} — capacity freed. Resume unloading.`,
+        );
+      }
+      case "resume_unload":
+        this.managementMode = false;
+        return this.apply({ command_id: this.nextCommandId("unload"), kind: "unload" }, "Resumed unloading: moved what now fits; any remainder stays aboard, preserved.");
+      case "back":
+        this.managementMode = false;
+        this.message = "Returned to dock. Recovered cargo remains aboard, preserved.";
+        return { ok: true, view: this.view(), applied: true, idempotent: false };
       case "complete":
         return this.apply({ command_id: this.nextCommandId("complete"), kind: "complete" }, "Expedition complete.");
       case "recover":
@@ -341,11 +432,14 @@ export class ExpeditionController {
     const overflowCap = {} as Record<CoreResource, number>;
     for (const resource of CORE_RESOURCES) {
       const band = this.domain.harbor.resources[resource];
+      const room = unloadRoom(this.domain, content, resource);
       harbor[resource] = {
         safe: band.safe,
         exposed: band.exposed,
         safe_capacity: band.caps.safe_capacity_st1,
         total_capacity: band.caps.total_capacity_st1,
+        storage_room: room.storage,
+        overflow_room: room.overflow,
       };
       overflowCap[resource] = content.overflow_cap_multiplier * band.caps.safe_capacity_st1;
     }
@@ -359,7 +453,8 @@ export class ExpeditionController {
       overflow: { ...this.domain.harbor_operations.overflow },
       overflow_cap: overflowCap,
       cargo_aboard: { ...active?.cargo_aboard },
-      unload_blocked: this.lastUnloadBlocked && this.domain.expedition.phase === "docked",
+      unload_blocked: isUnloadBlocked(this.domain, content),
+      management_mode: this.managementMode && this.domain.expedition.phase === "docked",
       vessel_condition: active?.vessel_condition ?? null,
       crew_condition: active?.crew_condition ?? null,
       guardian_condition: active?.guardian_condition ?? null,

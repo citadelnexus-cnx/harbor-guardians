@@ -40,6 +40,7 @@ import {
   createExpeditionState,
   createHarborOperationsState,
   ExpeditionInvariantError,
+  isUnloadBlocked,
   salvageFor,
   STARTING_GUARDIANS,
   type ExpeditionDomain,
@@ -249,6 +250,51 @@ test("blocked unloading preserves material aboard and never clamps existing hold
     ExpeditionInvariantError,
     "completion is refused while cargo remains aboard (no stranding)",
   );
+});
+
+test("jettison recovers a blocked unload: an explicit bounded discard frees capacity, resume unloads, then complete succeeds", () => {
+  // Build the same blocked state: Raxa (Iron) full success docked, Iron at 3S and Overflow at cap.
+  let d = toDocked("gdn.raxa", "full_success", "jet");
+  const arrived = d.expedition.active?.cargo_aboard.Iron ?? 0;
+  const caps = storageSeed.storage.Iron;
+  d = { ...d, harbor: deposit(d.harbor, "Iron", caps.total_capacity_st1 - (d.harbor.resources.Iron.safe + d.harbor.resources.Iron.exposed)).state };
+  const overflowCap = content.overflow_cap_multiplier * caps.safe_capacity_st1;
+  d = { ...d, harbor_operations: { ...d.harbor_operations, overflow: { Iron: overflowCap } } };
+  assert.ok(isUnloadBlocked(d, content), "the setup is genuinely blocked");
+
+  // A jettison beyond what is held is refused (stocks never go negative).
+  assert.throws(
+    () => applyCommand(d, { command_id: "jet.toomuch", kind: "jettison", resource: "Iron", band: "overflow", amount: overflowCap + 1 }, ctx),
+    ExpeditionInvariantError,
+    "cannot discard more than is held",
+  );
+
+  // One discard reports its exact band/amount and reduces Overflow by exactly that.
+  const held0 = d.harbor_operations.overflow.Iron ?? 0;
+  const discard0 = Math.min(arrived, held0);
+  const j0 = applyCommand(d, { command_id: "jet.d0", kind: "jettison", resource: "Iron", band: "overflow", amount: discard0 }, ctx);
+  assert.deepEqual(j0.jettisoned, { resource: "Iron", band: "overflow", amount: discard0 });
+  assert.equal(j0.domain.harbor_operations.overflow.Iron ?? 0, held0 - discard0, "Overflow reduced by exactly the discard");
+  d = j0.domain;
+  d = applyCommand(d, { command_id: "jet.u0", kind: "unload" }, ctx).domain;
+
+  // Drain the rest across bounded discard→unload cycles (each unload conserves exactly).
+  for (let i = 1; i < 6 && (d.expedition.active?.cargo_aboard.Iron ?? 0) > 0; i++) {
+    const aboard = d.expedition.active?.cargo_aboard.Iron ?? 0;
+    const held = d.harbor_operations.overflow.Iron ?? 0;
+    d = applyCommand(d, { command_id: `jet.d${i}`, kind: "jettison", resource: "Iron", band: "overflow", amount: Math.min(aboard, held) }, ctx).domain;
+    const unload = applyCommand(d, { command_id: `jet.u${i}`, kind: "unload" }, ctx);
+    const acc = unload.unload?.per_resource.Iron;
+    assert.ok(acc);
+    assert.equal(acc!.to_storage + acc!.to_overflow + acc!.left_aboard, aboard, "unload conservation holds each cycle");
+    d = unload.domain;
+  }
+
+  // Cargo drained → completion succeeds.
+  assert.equal(Object.keys(d.expedition.active?.cargo_aboard ?? {}).length, 0, "hold cleared after discard + resume cycles");
+  const complete = applyCommand(d, { command_id: "jet.complete", kind: "complete" }, ctx);
+  assert.equal(complete.domain.expedition.phase, "idle", "full-success expedition completed to idle (not stuck at docked)");
+  assert.equal(complete.domain.harbor_operations.completed_expeditions, 1, "completion counted");
 });
 
 // ── OPS1 cancel/refund routing (brief §2.9; SIM §4.7) ────────────────────────

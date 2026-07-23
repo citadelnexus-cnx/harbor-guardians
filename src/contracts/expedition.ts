@@ -92,6 +92,16 @@ export type ExpeditionOutcome =
 /** Condition of the vessel / crew / Guardian after an outcome (brief §2.15 bounded recovery). */
 export type ReadinessCondition = "ready" | "damaged";
 
+/**
+ * A storage band a jettison (explicit discard-to-free-capacity) may reduce.
+ * Used only to resolve a blocked-unloading soft-lock (PR #21 acceptance
+ * finding): when Safe Storage AND unsafe Overflow are both full for a resource,
+ * the player deliberately discards a bounded quantity from one band to make
+ * room, then resumes unloading. An explicit, player-initiated discard with full
+ * accounting — never silent loss (D30 "Discard-with-confirm" precedent).
+ */
+export type JettisonBand = "safe" | "exposed" | "overflow";
+
 /** A partial per-CoreResource amount map (DC6: CoreResource keys only — never Merit/receipt metrics). */
 export type ResourceAmounts = Partial<Record<CoreResource, number>>;
 
@@ -182,5 +192,6 @@ export type ExpeditionCommand =
   | { command_id: string; kind: "resolve"; outcome: ExpeditionOutcome }
   | { command_id: string; kind: "dock" }
   | { command_id: string; kind: "unload" }
+  | { command_id: string; kind: "jettison"; resource: CoreResource; band: JettisonBand; amount: number }
   | { command_id: string; kind: "complete" }
   | { command_id: string; kind: "recover" };

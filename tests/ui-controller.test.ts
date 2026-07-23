@@ -27,10 +27,14 @@ function controller(scenario?: "fresh" | "overflow_demo" | "cancel_block_demo"):
   return new ExpeditionController(storageSeed, expeditionSeed, SEED, scenario);
 }
 
-/** Find an offered action by kind (and optional outcome/guardian) — asserts it is actually available. */
+/** Find an offered action by kind (and optional outcome/guardian/band) — asserts it is actually available. */
 function offered(c: ExpeditionController, kind: UiAction["kind"], match?: Partial<UiAction>): UiAction {
   const action = c.availableActions().find(
-    (a) => a.kind === kind && (!match?.outcome || a.outcome === match.outcome) && (!match?.guardian_id || a.guardian_id === match.guardian_id),
+    (a) =>
+      a.kind === kind &&
+      (!match?.outcome || a.outcome === match.outcome) &&
+      (!match?.guardian_id || a.guardian_id === match.guardian_id) &&
+      (!match?.band || a.band === match.band),
   );
   assert.ok(action, `action ${kind} ${JSON.stringify(match ?? {})} should be offered in phase ${c.view().phase}`);
   return action;
@@ -142,23 +146,92 @@ test("adverse outcome: forced withdrawal leads to recovering; a single recover r
   assert.equal(c.view().phase, "idle");
 });
 
-test("blocked unloading: with Storage + Overflow full, unload leaves cargo aboard (preserved) and blocks completion", () => {
-  const c = controller("overflow_demo");
+/** Drive a Raxa full-success expedition in the overflow_demo scenario to the blocked dock. */
+function toBlockedDock(c: ExpeditionController): number {
   act(c, "start", { guardian_id: "gdn.raxa" }); // Raxa → Iron
   act(c, "prepare", { guardian_id: "gdn.raxa" });
   act(c, "depart");
   act(c, "advance");
   act(c, "resolve", { outcome: "full_success" });
   act(c, "dock");
-  const arrived = c.view().cargo_aboard.Iron ?? 0;
+  return c.view().cargo_aboard.Iron ?? 0;
+}
+
+test("blocked unloading is NOT a dead-end: it offers a manage action, blocks completion, and preserves cargo", () => {
+  const c = controller("overflow_demo");
+  const arrived = toBlockedDock(c);
   assert.ok(arrived > 0);
-  act(c, "unload");
   const v = c.view();
   assert.ok(v.unload_blocked, "unloading is blocked (Storage + Overflow full)");
   assert.equal(v.cargo_aboard.Iron, arrived, "the full salvage stays aboard, preserved");
-  // Completion is refused while cargo remains aboard.
+  const actions = c.availableActions();
+  assert.ok(actions.some((a) => a.kind === "manage"), "a Harbor-management continuation is offered (no dead-end)");
+  assert.ok(!actions.some((a) => a.kind === "complete"), "completion is not offered while cargo remains");
   const complete = c.perform({ kind: "complete", label: "x" });
-  assert.equal(complete.ok, false, "completion blocked while cargo remains (no stranding)");
+  assert.equal(complete.ok, false, "completion is refused while cargo remains (no stranding)");
+});
+
+test("blocked-unload RECOVERY: manage → discard to free capacity → resume unloading → drain to zero → complete", () => {
+  const c = controller("overflow_demo");
+  const arrived = toBlockedDock(c);
+
+  // Enter Harbor management; cargo is preserved and unchanged.
+  act(c, "manage");
+  assert.equal(c.view().management_mode, true);
+  assert.equal(c.view().cargo_aboard.Iron, arrived, "cargo preserved on entering management");
+
+  // Drain across as many discard→resume cycles as needed (bounded loop).
+  for (let i = 0; i < 8 && (c.view().cargo_aboard.Iron ?? 0) > 0; i++) {
+    if (!c.view().management_mode) act(c, "manage");
+    // Discard from unsafe Overflow (an explicit, bounded, authoritative discard).
+    const beforeOverflow = c.view().overflow.Iron ?? 0;
+    const r = c.perform(offered(c, "jettison", { band: "overflow" }));
+    assert.ok(r.ok, r.error);
+    assert.ok((c.view().overflow.Iron ?? 0) < beforeOverflow, "Overflow was reduced by the discard");
+    // Resume unloading — moves only what now fits.
+    act(c, "resume_unload");
+  }
+  assert.equal(Object.keys(c.view().cargo_aboard).length, 0, "cargo drained to zero across discard/resume cycles");
+
+  // Completion is now available and succeeds.
+  act(c, "complete");
+  assert.notEqual(c.view().phase, "docked", "the expedition completed once cargo reached zero");
+});
+
+test("blocked-unload: jettison is duplicate-click resistant (re-performing the same discard action is an idempotent no-op)", () => {
+  const c = controller("overflow_demo");
+  toBlockedDock(c);
+  act(c, "manage");
+  const jettison = offered(c, "jettison", { band: "overflow" });
+  const first = c.perform(jettison);
+  assert.ok(first.ok && first.applied);
+  const overflowAfterFirst = c.view().overflow.Iron ?? 0;
+  const second = c.perform(jettison); // same action object → same command_id
+  assert.equal(second.applied, false, "the duplicate discard is not applied");
+  assert.ok(second.idempotent, "the duplicate discard is an idempotent no-op");
+  assert.equal(c.view().overflow.Iron ?? 0, overflowAfterFirst, "no second discard occurred");
+});
+
+test("save/reload while blocked restores the exact blocked state and its recovery actions", () => {
+  const c = controller("overflow_demo");
+  const arrived = toBlockedDock(c);
+  const saved = c.serialize("2026-03-03T00:00:00.000Z");
+
+  const resumed = ExpeditionController.fromSerialized(saved, storageSeed, expeditionSeed, SEED);
+  const v = resumed.view();
+  assert.equal(v.phase, "docked");
+  assert.equal(v.cargo_aboard.Iron, arrived, "exact blocked cargo restored");
+  assert.ok(v.unload_blocked, "blocked state re-derived from persisted state after reload");
+  assert.ok(resumed.availableActions().some((a) => a.kind === "manage"), "the manage recovery action is available after reload");
+  // The recovery path works on the resumed session — drain across bounded cycles, then complete.
+  for (let i = 0; i < 8 && (resumed.view().cargo_aboard.Iron ?? 0) > 0; i++) {
+    if (!resumed.view().management_mode) resumed.perform(offered(resumed, "manage"));
+    resumed.perform(offered(resumed, "jettison", { band: "overflow" }));
+    resumed.perform(offered(resumed, "resume_unload"));
+  }
+  assert.equal(Object.keys(resumed.view().cargo_aboard).length, 0, "resumed session drains the cargo");
+  resumed.perform(offered(resumed, "complete"));
+  assert.notEqual(resumed.view().phase, "docked", "resumed session completes the loop after recovery");
 });
 
 test("duplicate-submit resistance: re-performing a resolve action does not double-apply", () => {

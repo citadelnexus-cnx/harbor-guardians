@@ -162,6 +162,38 @@ export function salvageFor(content, outcome, guardian) {
 function overflowCap(content, harbor, resource) {
     return content.overflow_cap_multiplier * harbor.resources[resource].caps.safe_capacity_st1;
 }
+/** Free room for one resource across the two unload tiers: Safe Storage (to 3S) and unsafe Overflow (to its cap). */
+export function unloadRoom(domain, content, resource) {
+    const band = domain.harbor.resources[resource];
+    const storage = Math.max(band.caps.total_capacity_st1 - (band.safe + band.exposed), 0);
+    const overflow = Math.max(overflowCap(content, domain.harbor, resource) - (domain.harbor_operations.overflow[resource] ?? 0), 0);
+    return { storage, overflow };
+}
+/**
+ * True when a further unload would move at least one unit — i.e. some aboard
+ * resource still has Safe Storage or Overflow room. When there is cargo aboard
+ * and this is false, unloading is BLOCKED (the soft-lock the jettison recovery
+ * path resolves). Pure function of the persisted authoritative state, so it is
+ * stable across save/reload.
+ */
+export function unloadWouldProgress(domain, content) {
+    const active = domain.expedition.active;
+    if (!active)
+        return false;
+    for (const [resource] of amountEntries(active.cargo_aboard)) {
+        const room = unloadRoom(domain, content, resource);
+        if (room.storage > 0 || room.overflow > 0)
+            return true;
+    }
+    return false;
+}
+/** True when there is cargo aboard AND no further unload can make progress (docked soft-lock). */
+export function isUnloadBlocked(domain, content) {
+    const active = domain.expedition.active;
+    if (!active || amountEntries(active.cargo_aboard).length === 0)
+        return false;
+    return !unloadWouldProgress(domain, content);
+}
 /** Build the ObservableState for the at-outpost EVT4 evaluation from the domain + context. */
 function observedState(domain, ctx) {
     return {
@@ -460,6 +492,51 @@ export function applyCommand(domain, command, ctx) {
             };
             assertExpeditionDomainValid(next, content);
             return { domain: next, applied: true, idempotent: false, unload: { per_resource: per, fully_unloaded: fullyUnloaded } };
+        }
+        case "jettison": {
+            // Explicit discard-to-free-capacity — the bounded recovery path for a
+            // blocked-unloading soft-lock (PR #21 acceptance finding). Legal only at
+            // the dock (the unload context). Reduces exactly one band by an exact
+            // amount through the authoritative storage operations (never a direct
+            // overwrite); a stock/holding never goes negative; the discarded amount
+            // is reported, never silently deleted (D30 discard-with-confirm).
+            requirePhase(domain, "docked", command.kind);
+            requireActive(domain, command.kind);
+            assertFiniteNonNegative(`jettison ${command.resource} amount`, command.amount);
+            if (command.amount === 0) {
+                throw new ExpeditionInvariantError("jettison amount must be positive — nothing to discard");
+            }
+            let jettisonHarbor = domain.harbor;
+            let jettisonOps = domain.harbor_operations;
+            if (command.band === "overflow") {
+                const current = jettisonOps.overflow[command.resource] ?? 0;
+                if (command.amount > current) {
+                    throw new ExpeditionInvariantError(`cannot jettison ${command.amount} ${command.resource} from Overflow — only ${current} held (stocks never go negative)`);
+                }
+                const nextOverflow = { ...jettisonOps.overflow };
+                const remaining = current - command.amount;
+                if (remaining === 0)
+                    delete nextOverflow[command.resource];
+                else
+                    nextOverflow[command.resource] = remaining;
+                jettisonOps = { ...jettisonOps, overflow: nextOverflow };
+            }
+            else {
+                // Safe / Exposed: the A1 authoritative withdraw (throws if amount exceeds the band; never negative).
+                jettisonHarbor = withdraw(jettisonHarbor, command.resource, command.band, command.amount);
+            }
+            const next = {
+                harbor: jettisonHarbor,
+                harbor_operations: jettisonOps,
+                expedition: stamp(domain.expedition),
+            };
+            assertExpeditionDomainValid(next, content);
+            return {
+                domain: next,
+                applied: true,
+                idempotent: false,
+                jettisoned: { resource: command.resource, band: command.band, amount: command.amount },
+            };
         }
         case "complete": {
             requirePhase(domain, "docked", command.kind);

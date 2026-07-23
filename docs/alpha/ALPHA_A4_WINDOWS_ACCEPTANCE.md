@@ -13,6 +13,25 @@ was rejected as not playable).
 > interactive section below is a **procedure with a results template — it has
 > NOT been executed by the implementer and no interactive result is claimed.**
 
+## Owner acceptance findings & corrections
+
+- **Finding 1 (soft-lock, corrected).** Owner interactive run reached a blocked
+  unload — phase `docked`, ~470 Provisions preserved aboard, message "blocked",
+  and the only action was "Unload again (blocked)", with no way to create
+  capacity → a dead-end. **Correction:** an authoritative `jettison` command
+  (explicit, bounded discard from a chosen band via the real storage
+  operations; non-negative; fully reported — D30 discard-with-confirm) plus a
+  Harbor-management UI flow: when unloading is blocked, the UI offers **"Free
+  capacity (manage Harbor storage)"** → discard from unsafe Overflow / Exposed /
+  Safe → **"Resume unloading"** (moves only what fits) → repeat until the hold
+  is empty → **Complete**. Cargo is preserved throughout; completion stays
+  gated until the hold is zero; discards are duplicate-click safe. Proven by
+  `tests/ui-controller.test.ts` (blocked→manage→discard→resume→drain→complete,
+  save/reload while blocked, duplicate-discard idempotency) and
+  `tests/expedition.test.ts` (sim-level jettison conservation + recovery).
+  **Owner retest of the full interactive flow is still pending** (see scenario F
+  below).
+
 ## What the desktop app is
 
 A Tauri 2 window (`src-tauri`) over the interactive frontend in
@@ -34,7 +53,7 @@ and number keys to run the whole loop without developer commands.
 | Lint (incl. generated engine + app.js) | `pnpm run lint` | PASS, 0 warnings |
 | Seed validation | `pnpm run schema:validate` | PASS (13 seeds / 4 sets) |
 | Invariant harness | `pnpm run sim:harness` | **A4 BATCH GREEN** — 132/17/115; determinism byte-identical @ seed 20260714 |
-| Interactive controller (UI→sim mapping) | `pnpm run test:ui` | 11/11 |
+| Interactive controller (UI→sim mapping, incl. blocked-unload recovery) | `pnpm run test:ui` | 14/14 |
 | Expedition scenario matrix | `pnpm run test:expedition` | 15/15 |
 | Save/migration (incl. v3→v4) | `pnpm run test:save` | 25/25 |
 | A1–A3 regression | `pnpm run test:harbor` / `test:ledger` / `test:events` | 9/9 · 16/16 · 21/21 |
@@ -70,7 +89,7 @@ cargo run --locked         # or: pnpm run tauri dev
 | C | Repeat expedition | start a second expedition after B | loop runs again; completed count increments; no incorrect intro replay | ☐ |
 | D | Cancellation | Choose Guardian → Prepare → **Cancel**; then "Blocked-cancel demo" → Cancel | refund exact (stock restored); blocked-cancel branch preserves supplies (stays *preparing*) | ☐ |
 | E | Adverse outcome | resolve **forced withdrawal** (or retreat/partial) → Dock → Complete → Recover | readiness shows *damaged*; phase *recovering*; recover restores readiness | ☐ |
-| F | Overflow / blocked unload | "Overflow demo" → run to Dock → Unload | Safe Storage fills, Overflow fills to its 3× cap, remainder **stays aboard (blocked)**; Complete refused until space frees | ☐ |
+| F | Overflow / blocked unload + recovery | "Overflow demo" → run to Dock → (blocked) **Free capacity** → discard from Overflow → **Resume unloading** → repeat until empty → **Complete** | Storage/Overflow fill; remainder **stays aboard (blocked)**; Complete refused until empty; discard frees room; resume drains cargo to zero; then Complete succeeds — **no dead-end** | ☐ |
 | G | Save & relaunch | at a non-Harbor phase click **Save**, close the window, relaunch | resumes the exact phase/state/actions; no reroll/duplication; complete the loop | ☐ |
 | H | Stability | throughout A–G | no crash, dead end, silent loss, duplicated value, invalid transition, or reroll | ☐ |
 
