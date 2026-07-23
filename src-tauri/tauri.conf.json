@@ -7,11 +7,12 @@
     "frontendDist": "../src/ui/shell"
   },
   "app": {
+    "withGlobalTauri": true,
     "windows": [
       {
-        "title": "Harbor Guardians — M0 Shell",
+        "title": "Harbor Guardians — First Playable Expedition Loop",
         "width": 1024,
-        "height": 640,
+        "height": 720,
         "resizable": true
       }
     ],

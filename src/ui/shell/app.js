@@ -1,127 +1,212 @@
-// Alpha A4 minimal Windows desktop viewer — vanilla, self-contained, no
-// imports, no network beyond the same-origin transcript (strict CSP
-// default-src 'self'). Renders the committed, sim-derived playthrough
-// (playthrough.json) — the deterministic Harbor -> route-anchor outpost ->
-// Harbor loop the real expedition sim produces. No gameplay input is wired in
-// this Alpha viewer (brief §2 minimal interface).
+// Alpha A4 interactive Windows player flow — ES-module DOM glue over the
+// compiled AUTHORITATIVE sim (./engine, built by `pnpm run ui:engine`). No
+// gameplay logic lives here: every button drives the real ExpeditionController;
+// save/resume goes through the Tauri save_game/load_game commands. Strict CSP
+// (default-src 'self') — same-origin module + fetch only, no external hosts.
 
-"use strict";
+import { ExpeditionController } from "./engine/ui/engine.js";
 
-var CORE_RESOURCES = ["Crowns", "Provisions", "Iron", "Aether"];
+const SEED = 20260723;
+const CORE_RESOURCES = ["Crowns", "Provisions", "Iron", "Aether"];
 
-// Fixed reference scales (per resource) so the bars read consistently across
-// steps. These mirror the ST1 3S caps plus the 3x overflow headroom; they are
-// display scales only, never gameplay values (the numbers shown come from the
-// transcript).
-var SAFE_CAP = { Crowns: 500, Provisions: 300, Iron: 300, Aether: 200 };
-var TOTAL_CAP = { Crowns: 1500, Provisions: 900, Iron: 900, Aether: 600 };
+// Tauri IPC (present only inside the desktop app; absent in a plain browser).
+const tauri = typeof window !== "undefined" ? window.__TAURI__ : undefined;
+const invoke = tauri && tauri.core ? tauri.core.invoke : null;
+
+let seeds = null;
+let controller = null;
 
 function el(tag, className, text) {
-  var node = document.createElement(tag);
+  const node = document.createElement(tag);
   if (className) node.className = className;
   if (text !== undefined) node.textContent = text;
   return node;
 }
 
-function resourceBar(resource, band, overflow) {
-  var total = TOTAL_CAP[resource] + SAFE_CAP[resource] * 3; // 3S + 3x Safe overflow headroom
-  var row = el("div", "bar-row");
+function newController(scenario) {
+  controller = new ExpeditionController(seeds.storage, seeds.expedition, SEED, scenario);
+  render();
+}
+
+function statusRow(label, value, cls) {
+  const row = el("div", "status-row");
+  row.appendChild(el("span", "status-label", label));
+  row.appendChild(el("span", "status-value" + (cls ? " " + cls : ""), value));
+  return row;
+}
+
+function renderStatus(v) {
+  const grid = document.getElementById("status");
+  grid.textContent = "";
+  grid.appendChild(statusRow("Phase", v.phase));
+  grid.appendChild(statusRow("Guardian", v.guardian_id ? v.guardian_id.replace("gdn.", "") : "—"));
+  grid.appendChild(statusRow("Objective (event)", v.event_state || "—"));
+  grid.appendChild(statusRow("Outcome", v.outcome || "—"));
+  grid.appendChild(statusRow("Vessel", v.vessel_condition || "—", v.vessel_condition === "damaged" ? "bad" : ""));
+  grid.appendChild(statusRow("Crew", v.crew_condition || "—", v.crew_condition === "damaged" ? "bad" : ""));
+  grid.appendChild(statusRow("Guardian readiness", v.guardian_condition || "—", v.guardian_condition === "damaged" ? "bad" : ""));
+  grid.appendChild(statusRow("Route-anchor ops", v.route_anchor_unlocked ? "unlocked" : "locked", v.route_anchor_unlocked ? "good" : ""));
+  grid.appendChild(statusRow("Completed expeditions", String(v.completed_expeditions)));
+  const supplies = Object.keys(v.supply_set).map((k) => v.supply_set[k] + " " + k).join(", ");
+  grid.appendChild(statusRow("Supply loadout", supplies || "—"));
+}
+
+function storageBar(resource, band, overflow, overflowCap) {
+  const scale = band.total_capacity + overflowCap; // 3S + 3×S overflow headroom
+  const row = el("div", "bar-row");
   row.appendChild(el("span", "bar-label", resource));
-
-  var bar = el("div", "bar");
-  var safe = el("span", "seg-safe");
-  safe.style.width = (100 * band.safe) / total + "%";
-  var exposed = el("span", "seg-exposed");
-  exposed.style.width = (100 * band.exposed) / total + "%";
-  var over = el("span", "seg-overflow");
-  over.style.width = (100 * (overflow || 0)) / total + "%";
-  bar.appendChild(safe);
-  bar.appendChild(exposed);
-  bar.appendChild(over);
+  const bar = el("div", "bar");
+  const seg = (cls, amount) => {
+    const s = el("span", cls);
+    s.style.width = (100 * amount) / scale + "%";
+    bar.appendChild(s);
+  };
+  seg("seg-safe", band.safe);
+  seg("seg-exposed", band.exposed);
+  seg("seg-overflow", overflow || 0);
   row.appendChild(bar);
-
-  var parts = ["safe " + band.safe, "exposed " + band.exposed];
-  if (overflow) parts.push("overflow " + overflow);
+  const parts = ["safe " + band.safe + "/" + band.safe_capacity, "exposed " + band.exposed];
+  if (overflow) parts.push("overflow " + overflow + "/" + overflowCap);
   row.appendChild(el("span", "bar-val", parts.join(" · ")));
   return row;
 }
 
-function stepCard(step) {
-  var card = el("div", "step");
-  var head = el("div", "step-head");
-  head.appendChild(el("span", "cmd", step.command));
-  head.appendChild(el("span", "phase", step.phase));
-  card.appendChild(head);
-  card.appendChild(el("p", "note", step.note));
-
-  var bars = el("div", "bars");
-  for (var i = 0; i < CORE_RESOURCES.length; i++) {
-    var r = CORE_RESOURCES[i];
-    var band = step.harbor[r] || { safe: 0, exposed: 0 };
-    bars.appendChild(resourceBar(r, band, step.overflow ? step.overflow[r] : 0));
+function renderStorage(v) {
+  const wrap = document.getElementById("storage");
+  wrap.textContent = "";
+  for (const r of CORE_RESOURCES) {
+    wrap.appendChild(storageBar(r, v.harbor[r], v.overflow[r], v.overflow_cap[r]));
   }
-  card.appendChild(bars);
-
-  var cargoKeys = Object.keys(step.cargo_aboard || {});
-  if (cargoKeys.length > 0) {
-    var text = cargoKeys
-      .map(function (k) {
-        return step.cargo_aboard[k] + " " + k;
-      })
-      .join(", ");
-    card.appendChild(el("p", "cargo", "Aboard: " + text));
+  const cargo = document.getElementById("cargo");
+  const keys = Object.keys(v.cargo_aboard);
+  if (keys.length > 0) {
+    const text = keys.map((k) => v.cargo_aboard[k] + " " + k).join(", ");
+    cargo.textContent = (v.unload_blocked ? "Blocked — still aboard (preserved): " : "Aboard: ") + text;
+    cargo.className = v.unload_blocked ? "cargo blocked" : "cargo";
   } else {
-    card.appendChild(el("p", "cargo empty", "Hold empty"));
-  }
-  return card;
-}
-
-function renderRun(run) {
-  var steps = document.getElementById("steps");
-  steps.textContent = "";
-  var legend = el("div", "legend");
-  legend.appendChild(el("span", "l-safe", "Safe Storage"));
-  legend.appendChild(el("span", "l-exposed", "Exposed"));
-  legend.appendChild(el("span", "l-overflow", "Unsafe Overflow (3× Safe cap)"));
-  steps.appendChild(legend);
-  for (var i = 0; i < run.steps.length; i++) {
-    steps.appendChild(stepCard(run.steps[i]));
+    cargo.textContent = "Hold empty";
+    cargo.className = "cargo empty";
   }
 }
 
-function renderTabs(transcript) {
-  var tabs = document.getElementById("run-tabs");
-  tabs.textContent = "";
-  transcript.runs.forEach(function (run, index) {
-    var btn = el("button", null, run.title || run.guardian_id);
+function renderActions() {
+  const wrap = document.getElementById("actions");
+  wrap.textContent = "";
+  const actions = controller.availableActions();
+  if (actions.length === 0) {
+    wrap.appendChild(el("p", "hint", "No actions in this phase."));
+    return;
+  }
+  actions.forEach((action, i) => {
+    const btn = el("button", "action-btn", (i + 1) + ". " + action.label);
     btn.setAttribute("type", "button");
-    btn.setAttribute("aria-selected", index === 0 ? "true" : "false");
-    btn.addEventListener("click", function () {
-      var all = tabs.querySelectorAll("button");
-      for (var j = 0; j < all.length; j++) all[j].setAttribute("aria-selected", "false");
-      btn.setAttribute("aria-selected", "true");
-      renderRun(run);
-    });
-    tabs.appendChild(btn);
+    btn.addEventListener("click", () => perform(action));
+    wrap.appendChild(btn);
   });
 }
 
-function render(transcript) {
-  var context = document.getElementById("context");
-  context.textContent =
-    "Content: " + transcript.content_id + " · Route: " + transcript.route_id + " · Outpost: " + transcript.outpost_id;
-  renderTabs(transcript);
-  if (transcript.runs.length > 0) renderRun(transcript.runs[0]);
+function perform(action) {
+  const res = controller.perform(action);
+  if (!res.ok) setMessage("Rejected: " + res.error, true);
+  render();
 }
 
-fetch("./playthrough.json")
-  .then(function (response) {
-    if (!response.ok) throw new Error("HTTP " + response.status);
-    return response.json();
-  })
-  .then(render)
-  .catch(function (err) {
-    var steps = document.getElementById("steps");
-    steps.textContent = "";
-    steps.appendChild(el("p", "error", "Could not load the expedition transcript: " + err.message));
-  });
+function setMessage(text, isError) {
+  const m = document.getElementById("message");
+  m.textContent = text;
+  m.className = isError ? "message error" : "message";
+}
+
+function render() {
+  const v = controller.view();
+  document.getElementById("context").textContent =
+    "Content: " + v.content_id + " · Route: " + v.route_id + " · Outpost: " + v.outpost_id;
+  setMessage(v.message, false);
+  renderStatus(v);
+  renderStorage(v);
+  renderActions();
+}
+
+// ── Keyboard: number keys 1–9 trigger the corresponding action ───────────────
+document.addEventListener("keydown", (e) => {
+  if (!controller) return;
+  const n = Number(e.key);
+  if (Number.isInteger(n) && n >= 1) {
+    const actions = controller.availableActions();
+    if (n <= actions.length) {
+      perform(actions[n - 1]);
+      e.preventDefault();
+    }
+  }
+});
+
+// ── Persistence (Tauri only) ─────────────────────────────────────────────────
+async function doSave() {
+  if (!invoke) return;
+  try {
+    await invoke("save_game", { json: controller.serialize(new Date().toISOString()) });
+    setMessage("Saved. Close and relaunch to resume this exact state.", false);
+  } catch (err) {
+    setMessage("Save failed: " + err, true);
+  }
+}
+
+async function doLoad() {
+  if (!invoke) return;
+  try {
+    const json = await invoke("load_game");
+    if (!json) {
+      setMessage("No saved game found.", false);
+      return;
+    }
+    controller = ExpeditionController.fromSerialized(json, seeds.storage, seeds.expedition, SEED);
+    render();
+  } catch (err) {
+    setMessage("Load failed (save left untouched): " + err, true);
+  }
+}
+
+function wireControls() {
+  document.getElementById("sc-fresh").addEventListener("click", () => newController("fresh"));
+  document.getElementById("sc-overflow").addEventListener("click", () => newController("overflow_demo"));
+  document.getElementById("sc-cancelblock").addEventListener("click", () => newController("cancel_block_demo"));
+  const saveBtn = document.getElementById("btn-save");
+  const loadBtn = document.getElementById("btn-load");
+  const note = document.getElementById("persistence-note");
+  if (invoke) {
+    saveBtn.disabled = false;
+    loadBtn.disabled = false;
+    saveBtn.addEventListener("click", doSave);
+    loadBtn.addEventListener("click", doLoad);
+    note.textContent = "local save file (atomic)";
+  } else {
+    note.textContent = "unavailable outside the desktop app";
+  }
+}
+
+async function boot() {
+  try {
+    const res = await fetch("./seeds.json");
+    seeds = await res.json();
+  } catch (err) {
+    setMessage("Could not load seed data: " + err, true);
+    return;
+  }
+  wireControls();
+  // Resume an existing save if present; otherwise start fresh.
+  if (invoke) {
+    try {
+      const json = await invoke("load_game");
+      if (json) {
+        controller = ExpeditionController.fromSerialized(json, seeds.storage, seeds.expedition, SEED);
+        render();
+        return;
+      }
+    } catch (err) {
+      setMessage("Existing save could not be loaded (starting fresh): " + err, true);
+    }
+  }
+  newController("fresh");
+}
+
+boot();

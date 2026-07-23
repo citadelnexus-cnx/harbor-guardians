@@ -428,8 +428,10 @@ test("A4 regression guard: a full expedition leaves a pre-existing Claim Ledger 
 
 // ── Minimal Windows desktop viewer transcript (brief §2/§7) ──────────────────
 
-test("UI viewer transcript: the committed src/ui/shell/playthrough.json is byte-identical to a fresh sim-derived generation (no drift)", () => {
-  const committed = readFileSync("src/ui/shell/playthrough.json", "utf8");
-  const fresh = canonicalSerialize(buildPlaythrough(storageSeed, loadExpeditionSeed(), 20260723)) + "\n";
-  assert.equal(committed, fresh, "the viewer transcript must be regenerated from the sim (run `pnpm run ui:playthrough`)");
+test("UI data bundles: committed seeds.json + playthrough.json are byte-identical to a fresh sim-derived generation (no drift)", () => {
+  const expeditionSeed = loadExpeditionSeed();
+  const seeds = canonicalSerialize({ storage: storageSeed, expedition: expeditionSeed }) + "\n";
+  assert.equal(readFileSync("src/ui/shell/seeds.json", "utf8"), seeds, "seeds.json must be regenerated (run `pnpm run ui:build`)");
+  const transcript = canonicalSerialize(buildPlaythrough(storageSeed, expeditionSeed, 20260723)) + "\n";
+  assert.equal(readFileSync("src/ui/shell/playthrough.json", "utf8"), transcript, "playthrough.json must be regenerated (run `pnpm run ui:build`)");
 });

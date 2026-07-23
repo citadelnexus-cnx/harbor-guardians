@@ -19,7 +19,10 @@
     "test:ledger": "tsx --test tests/claim-ledger.test.ts",
     "test:events": "tsx --test tests/event-lifecycle.test.ts",
     "test:expedition": "tsx --test tests/expedition.test.ts",
+    "test:ui": "tsx --test tests/ui-controller.test.ts",
+    "ui:engine": "tsc -p tsconfig.engine.json",
     "ui:playthrough": "tsx scripts/build-playthrough.mts",
+    "ui:build": "pnpm run ui:engine && pnpm run ui:playthrough",
     "tauri": "tauri"
   },
   "devDependencies": {
