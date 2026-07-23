@@ -25,6 +25,9 @@ export const CLAIM_LEDGER_RULES_SCHEMA_FILE = "schema/claim_ledger_rules_seed.sc
 export const EVENT_FIXTURE_SCHEMA_ID = "hg.event_fixture_seed";
 export const EVENT_FIXTURE_SCHEMA_FILE = "schema/event_fixture_seed.schema.json";
 
+export const EXPEDITION_SEED_SCHEMA_ID = "hg.expedition_seed";
+export const EXPEDITION_SEED_SCHEMA_FILE = "schema/expedition_seed.schema.json";
+
 function generateFrom(sourcePath, typeName, schemaId) {
   const generator = createGenerator({
     tsconfig: "tsconfig.json",
@@ -77,6 +80,17 @@ export function buildEventFixtureSeedSchema() {
   return generateFrom("src/contracts/event.ts", "EventFixtureSeed", EVENT_FIXTURE_SCHEMA_ID);
 }
 
+/**
+ * expedition_seed schema (brief §3 version-pinned content) — Alpha A4 Bounded
+ * First Playable Expedition Loop. Validates the /data/expeditions seed set;
+ * every A4 gameplay number originates here (DC1), covered by DC4 metadata.
+ * `supply_set` keys against CoreResource only (DC6-adjacent), so a resource
+ * map admitting Merit/receipt metrics fails validation.
+ */
+export function buildExpeditionSeedSchema() {
+  return generateFrom("src/contracts/expedition-seed.ts", "ExpeditionSeed", EXPEDITION_SEED_SCHEMA_ID);
+}
+
 /** Every generated schema, one entry per /schema output file (drift-guarded in validate-data.mjs). */
 export const SCHEMA_BUILDS = [
   { file: SCHEMA_FILE, build: buildGuardianKitSeedSchema },
@@ -84,6 +98,7 @@ export const SCHEMA_BUILDS = [
   { file: RESOURCE_STORAGE_SCHEMA_FILE, build: buildResourceStorageSeedSchema },
   { file: CLAIM_LEDGER_RULES_SCHEMA_FILE, build: buildClaimLedgerRulesSeedSchema },
   { file: EVENT_FIXTURE_SCHEMA_FILE, build: buildEventFixtureSeedSchema },
+  { file: EXPEDITION_SEED_SCHEMA_FILE, build: buildExpeditionSeedSchema },
 ];
 
 export function serializeSchema(schema) {

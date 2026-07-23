@@ -26,6 +26,8 @@ import { migrateSaveBlobToCurrent, SaveMigrationError } from "../src/save/migrat
 import {
   proveCrashDuringWriteSurvival,
   proveEmptyStateRoundTrip,
+  proveExpeditionCrashSurvival,
+  proveExpeditionStateRoundTrip,
   proveLedgerStateRoundTrip,
   proveStockedStateRoundTrip,
   SimulatedCrashError,
@@ -34,11 +36,21 @@ import { createSaveBlobValidator, SaveValidationError } from "../src/save/save-b
 import type { SaveBlob } from "../src/contracts/save-blob.js";
 import { SAVE_SCHEMA_VERSION } from "../src/contracts/save-blob.js";
 import { loadClaimLedgerRulesSeed } from "../sim-harness/ledger-rules-seed.js";
+import { loadExpeditionSeed } from "../sim-harness/expedition-seed.js";
 import { loadStorageSeed } from "../sim-harness/storage-seed.js";
 
 const validate = createSaveBlobValidator();
 const V1_FIXTURE_PATH = "tests/fixtures/save.v1.json";
 const V2_FIXTURE_PATH = "tests/fixtures/save.v2.json";
+const V3_FIXTURE_PATH = "tests/fixtures/save.v3.json";
+
+const IDENTITY_EXPEDITION = { phase: "idle", active: null, next_expedition_index: 0, last_command_id: null };
+const IDENTITY_HARBOR_OPS = {
+  overflow: {},
+  canonical_intro_consumed: false,
+  route_anchor_operations_unlocked: false,
+  completed_expeditions: 0,
+};
 
 function withTempDir(run: (dir: string) => void): void {
   const dir = mkdtempSync(join(tmpdir(), "hg-saveload-test-"));
@@ -206,7 +218,7 @@ test("migration: committed v2 fixture (with real A2 ledger content) migrates to 
   });
 });
 
-test("migration: the v1 fixture chains v1→v2→v3 and equals a fresh current-version equivalent", () => {
+test("migration: the v1 fixture chains v1→v2→v3→v4 and equals a fresh current-version equivalent", () => {
   withTempDir((dir) => {
     const slot = join(dir, "chained.save.json");
     copyFileSync(V1_FIXTURE_PATH, slot);
@@ -214,6 +226,71 @@ test("migration: the v1 fixture chains v1→v2→v3 and equals a fresh current-v
     assert.equal(loaded.meta.save_schema_version, SAVE_SCHEMA_VERSION);
     assert.deepEqual(loaded.claim_ledger, { packages: [], story_claims: [] });
     assert.deepEqual(loaded.events, []);
+    assert.deepEqual(loaded.expedition, IDENTITY_EXPEDITION, "v4 expedition block starts at identity");
+    assert.deepEqual(loaded.harbor_operations, IDENTITY_HARBOR_OPS, "v4 harbor_operations block starts at identity");
+  });
+});
+
+// ── Save-schema migration v3 → v4 (Save/Load §14; A4 bump) ──────────────────
+
+test("migration: committed v3 fixture (with real A1–A3 content) migrates to v4 preserving every block exactly", () => {
+  withTempDir((dir) => {
+    const slot = join(dir, "migrated-v3.save.json");
+    copyFileSync(V3_FIXTURE_PATH, slot);
+    const fixtureBytes = readFileSync(slot, "utf8");
+    const fixture = JSON.parse(fixtureBytes) as Record<string, unknown>;
+
+    const loaded = loadSave(slot, validate);
+    assert.equal(loaded.meta.save_schema_version, SAVE_SCHEMA_VERSION, "migrated save carries the current version");
+    assert.deepEqual(loaded.expedition, IDENTITY_EXPEDITION, "the new expedition block starts at identity — nothing invented");
+    assert.deepEqual(loaded.harbor_operations, IDENTITY_HARBOR_OPS, "the new harbor_operations block starts at identity");
+
+    // Every A1–A3 block passes through byte-preserved: no player value transformed, created, or lost.
+    for (const block of ["resources", "claim_ledger", "pending_reward_resolution", "events", "world_clock", "threat"] as const) {
+      assert.equal(
+        canonicalSerialize(loaded[block]),
+        canonicalSerialize(fixture[block]),
+        `${block} preserved exactly through v3→v4`,
+      );
+    }
+    assert.equal(loaded.claim_ledger.packages.length, 1, "ledger package survived");
+    assert.equal(loaded.claim_ledger.story_claims.length, 1, "story claim survived (L5)");
+    assert.equal(loaded.pending_reward_resolution.length, 1, "pending record survived (L14)");
+    assert.equal(loaded.events.length, 1, "the A3 event instance survived (EVT3)");
+
+    // Loading never mutates the on-disk v3 file; re-saving commits the migrated state atomically.
+    assert.equal(readFileSync(slot, "utf8"), fixtureBytes, "load leaves the v3 file untouched");
+    saveAtomically(slot, loaded, { validate });
+    assert.equal(canonicalSerialize(loadSave(slot, validate)), canonicalSerialize(loaded), "re-saved migrated state round-trips");
+  });
+});
+
+test("migration: a 'v3' save already carrying an expedition or harbor_operations block is refused (tamper)", () => {
+  const v3 = JSON.parse(readFileSync(V3_FIXTURE_PATH, "utf8")) as Record<string, unknown>;
+  assert.throws(() => migrateSaveBlobToCurrent({ ...v3, expedition: IDENTITY_EXPEDITION }), SaveMigrationError);
+  assert.throws(() => migrateSaveBlobToCurrent({ ...v3, harbor_operations: IDENTITY_HARBOR_OPS }), SaveMigrationError);
+});
+
+test("migration: v3→v4 is idempotent — re-migrating a current-version save is a no-op", () => {
+  const current = createEmptySaveBlob({ game_version: "0.0.0", last_saved_utc: "2026-01-01T00:00:00.000Z" });
+  assert.equal(current.meta.save_schema_version, SAVE_SCHEMA_VERSION);
+  const again = migrateSaveBlobToCurrent(current) as SaveBlob;
+  assert.equal(canonicalSerialize(again), canonicalSerialize(current), "a current-version save migrates to itself unchanged");
+});
+
+// ── S5/S7 @ A4 expedition-bearing proofs (SaveBlob v4) ──────────────────────
+
+test("S5 @ A4: expedition-bearing round-trip proof (as wired into the harness) passes", () => {
+  withTempDir((dir) => {
+    const proof = proveExpeditionStateRoundTrip(dir, validate, loadStorageSeed(), loadExpeditionSeed());
+    assert.ok(proof.pass, proof.detail);
+  });
+});
+
+test("S7 @ A4: expedition-bearing crash-survival proof (as wired into the harness) passes", () => {
+  withTempDir((dir) => {
+    const proof = proveExpeditionCrashSurvival(dir, validate, loadStorageSeed(), loadExpeditionSeed());
+    assert.ok(proof.pass, proof.detail);
   });
 });
 

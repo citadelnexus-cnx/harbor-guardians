@@ -16,6 +16,7 @@
 import { readFileSync } from "node:fs";
 import Ajv from "ajv";
 import type { SaveBlob } from "../contracts/save-blob.js";
+import type { ExpeditionState, HarborOperationsState } from "../contracts/expedition.js";
 
 /** Thrown when a blob fails schema validation — the save aborts before commit (S7). */
 export class SaveValidationError extends Error {
@@ -68,12 +69,53 @@ export function assertPersistedEventIdentity(events: ReadonlyArray<{ instance_id
   }
 }
 
+/** The A4 expedition phases that require an active expedition (everything but idle). */
+const NON_IDLE_PHASES: ReadonlyArray<ExpeditionState["phase"]> = [
+  "preparing",
+  "en_route",
+  "at_outpost",
+  "returning",
+  "docked",
+  "recovering",
+];
+
+/**
+ * Pure structural invariants over the persisted A4 blocks (SaveBlob v4) that
+ * JSON Schema cannot express — the phase/active coupling (an active expedition
+ * exists iff the phase is not idle) and non-negativity of the overflow
+ * holdings and counters. A tampered save that violates these is refused loudly
+ * before commit and before resume (malformed-state rejection — brief §11). The
+ * deeper overflow-CAP check needs the /data seed's Safe capacity and runs in
+ * the sim (assertExpeditionDomainValid), not here.
+ */
+export function assertExpeditionSaveShape(expedition: ExpeditionState, ops: HarborOperationsState): void {
+  const idle = expedition.phase === "idle";
+  if (idle && expedition.active !== null) {
+    throw new SaveIdentityError("expedition phase is idle but an active expedition is present");
+  }
+  if (NON_IDLE_PHASES.includes(expedition.phase) && expedition.active === null) {
+    throw new SaveIdentityError(`expedition phase is ${expedition.phase} but no active expedition is present`);
+  }
+  if (!Number.isInteger(expedition.next_expedition_index) || expedition.next_expedition_index < 0) {
+    throw new SaveIdentityError(`expedition.next_expedition_index must be a non-negative integer`);
+  }
+  if (!Number.isInteger(ops.completed_expeditions) || ops.completed_expeditions < 0) {
+    throw new SaveIdentityError(`harbor_operations.completed_expeditions must be a non-negative integer`);
+  }
+  for (const [resource, amount] of Object.entries(ops.overflow)) {
+    if (typeof amount !== "number" || !Number.isFinite(amount) || amount < 0) {
+      throw new SaveIdentityError(`harbor_operations.overflow.${resource} must be a finite non-negative number`);
+    }
+  }
+}
+
 /**
  * Compile a validator from the committed generated schema. Throws
  * SaveValidationError on any schema violation, then SaveIdentityError on any
- * persisted-events identity violation the schema cannot express. Both
+ * semantic invariant the schema cannot express (persisted-events identity;
+ * A4 expedition phase/active coupling + overflow non-negativity). Both
  * saveAtomically (pre-commit) and loadSave (post-migration) call the returned
- * validator, so neither the identity guard nor the schema check is bypassable.
+ * validator, so none of these guards is bypassable.
  */
 export function createSaveBlobValidator(schemaPath: string = SAVE_BLOB_SCHEMA_PATH): SaveBlobValidator {
   const schema = JSON.parse(readFileSync(schemaPath, "utf8"));
@@ -83,9 +125,9 @@ export function createSaveBlobValidator(schemaPath: string = SAVE_BLOB_SCHEMA_PA
     if (!validate(blob)) {
       throw new SaveValidationError(ajv.errorsText(validate.errors, { separator: "; " }));
     }
-    // Schema passed → the blob has the SaveBlob shape (events: EventInstance[]
-    // with string instance_id). Enforce the unique/non-empty identity
-    // invariant the schema cannot express.
+    // Schema passed → the blob has the SaveBlob shape. Enforce the semantic
+    // invariants the schema cannot express (identity + A4 phase/active coupling).
     assertPersistedEventIdentity((blob as SaveBlob).events);
+    assertExpeditionSaveShape((blob as SaveBlob).expedition, (blob as SaveBlob).harbor_operations);
   };
 }

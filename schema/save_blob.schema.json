@@ -65,6 +65,14 @@
           },
           "description": "Mid-flight event-lifecycle instances (Doc 15 §2; EVT3) — real shape since A3 (v3). Inert staged effects only; no effect execution exists."
         },
+        "expedition": {
+          "$ref": "#/definitions/ExpeditionState",
+          "description": "Bounded First Playable Expedition Loop domain (brief §2/§3) — real shape since A4 (v4)."
+        },
+        "harbor_operations": {
+          "$ref": "#/definitions/HarborOperationsState",
+          "description": "Unsafe Overflow holdings + one-time intro/unlock flags (brief §2.12/§2.16/§2.17) — real shape since A4 (v4)."
+        },
         "system_messages": {
           "$ref": "#/definitions/EmptyListM0",
           "description": "system_message records (Save/Load §12, M8)."
@@ -92,6 +100,8 @@
         "claim_ledger",
         "pending_reward_resolution",
         "events",
+        "expedition",
+        "harbor_operations",
         "system_messages",
         "merit",
         "guardian_bond",
@@ -471,6 +481,212 @@
         "guardian_reaction"
       ],
       "description": "The existing system an effect WOULD bind to (Doc 15 §4 table). Pure reference vocabulary at A3: no dispatch to any of these systems exists, and the lifecycle never interprets this field (EVT5/EVT6 fail-loud)."
+    },
+    "ExpeditionState": {
+      "type": "object",
+      "properties": {
+        "phase": {
+          "$ref": "#/definitions/ExpeditionPhase"
+        },
+        "active": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/ActiveExpedition"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "next_expedition_index": {
+          "type": "number",
+          "description": "Monotonic counter driving the deterministic expedition stream (brief §3)."
+        },
+        "last_command_id": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "The last applied command id — re-applying it is an idempotent no-op (brief §3)."
+        }
+      },
+      "required": [
+        "phase",
+        "active",
+        "next_expedition_index",
+        "last_command_id"
+      ],
+      "additionalProperties": false,
+      "description": "The expedition domain state (SaveBlob v4 `expedition` block)."
+    },
+    "ExpeditionPhase": {
+      "type": "string",
+      "enum": [
+        "idle",
+        "preparing",
+        "en_route",
+        "at_outpost",
+        "returning",
+        "docked",
+        "recovering"
+      ],
+      "description": "Expedition lifecycle phase (brief §1/§2). A strict, deterministic sequence:\n\n  idle → preparing → en_route → at_outpost → returning → docked        → (unloading is performed in-place at `docked`) → recovering? → idle\n\n`cancelled` is not a phase: cancellation returns the domain to `idle` from `preparing` (OPS1 refund). Damage sends `docked`→`recovering`; a clean expedition returns straight to `idle`."
+    },
+    "ActiveExpedition": {
+      "type": "object",
+      "properties": {
+        "expedition_id": {
+          "type": "string",
+          "description": "Deterministic identity `exp.<index>` from the seeded expedition stream (brief §3)."
+        },
+        "expedition_seed": {
+          "type": "number",
+          "description": "Deterministic per-expedition seed derived from the stream (brief §3)."
+        },
+        "content_id": {
+          "type": "string",
+          "description": "The version-pinned content id this expedition was prepared from (brief §3)."
+        },
+        "guardian_id": {
+          "$ref": "#/definitions/StartingGuardianId",
+          "description": "The selected starting Guardian (equivalent sidegrade — composition only)."
+        },
+        "supplies_committed": {
+          "$ref": "#/definitions/ResourceAmounts",
+          "description": "Supplies withdrawn from the Harbor at preparation and held on the vessel. Refunded exactly on cancellation (OPS1); consumed (spent) on dispatch."
+        },
+        "dispatched": {
+          "type": "boolean",
+          "description": "True once dispatched — supplies are then spent and cancellation is no longer legal."
+        },
+        "outcome": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/ExpeditionOutcome"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "The resolved outcome, or null until `at_outpost → returning`."
+        },
+        "cargo_aboard": {
+          "$ref": "#/definitions/ResourceAmounts",
+          "description": "Recovered salvage still aboard the vessel, awaiting unload. Loaded at resolution per (outcome, guardian composition); reduced by each unload; any blocked remainder stays here (preserved, never dropped — brief §2.13)."
+        },
+        "vessel_condition": {
+          "$ref": "#/definitions/ReadinessCondition"
+        },
+        "crew_condition": {
+          "$ref": "#/definitions/ReadinessCondition"
+        },
+        "guardian_condition": {
+          "$ref": "#/definitions/ReadinessCondition"
+        },
+        "event": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/EventInstance"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "The bounded at-outpost event (EVT1–EVT4 reuse). Null before arrival; created DORMANT at arrival and advanced deterministically to RESOLVED at resolution. Staged effects are inert (no execution)."
+        }
+      },
+      "required": [
+        "expedition_id",
+        "expedition_seed",
+        "content_id",
+        "guardian_id",
+        "supplies_committed",
+        "dispatched",
+        "outcome",
+        "cargo_aboard",
+        "vessel_condition",
+        "crew_condition",
+        "guardian_condition",
+        "event"
+      ],
+      "additionalProperties": false,
+      "description": "One in-flight expedition. Created at `prepare`, cleared at completion. All amounts are copied from the schema-validated /data expedition seed at preparation time (version-pinned content, brief §3) — never recomputed from magic numbers."
+    },
+    "StartingGuardianId": {
+      "type": "string",
+      "enum": [
+        "gdn.raxa",
+        "gdn.tarin",
+        "gdn.nova"
+      ],
+      "description": "The three starting Guardians (brief §2.3/§4). These ids match the canonical /data/guardians launch seeds (gdn.raxa / gdn.tarin / gdn.nova). The choice is an equivalent sidegrade — it selects salvage composition only."
+    },
+    "ResourceAmounts": {
+      "type": "object",
+      "properties": {
+        "Crowns": {
+          "type": "number"
+        },
+        "Provisions": {
+          "type": "number"
+        },
+        "Iron": {
+          "type": "number"
+        },
+        "Aether": {
+          "type": "number"
+        }
+      },
+      "additionalProperties": false,
+      "description": "A partial per-CoreResource amount map (DC6: CoreResource keys only — never Merit/receipt metrics)."
+    },
+    "ExpeditionOutcome": {
+      "type": "string",
+      "enum": [
+        "cancelled",
+        "full_success",
+        "partial_success",
+        "retreat",
+        "forced_withdrawal"
+      ],
+      "description": "The authorized outcome set (brief §2.9). `cancelled` is reachable only from `preparing` (pre-dispatch, full supply refund — OPS1); the other four are at-outpost resolutions selected at `at_outpost → returning`."
+    },
+    "ReadinessCondition": {
+      "type": "string",
+      "enum": [
+        "ready",
+        "damaged"
+      ],
+      "description": "Condition of the vessel / crew / Guardian after an outcome (brief §2.15 bounded recovery)."
+    },
+    "HarborOperationsState": {
+      "type": "object",
+      "properties": {
+        "overflow": {
+          "$ref": "#/definitions/ResourceAmounts",
+          "description": "Unsafe Overflow holdings per CoreResource (brief §2.12): salvage that did not fit Safe Storage, capped per resource at `overflow_cap_multiplier ×` the current Safe capacity S. Never negative; never exceeds the cap."
+        },
+        "canonical_intro_consumed": {
+          "type": "boolean",
+          "description": "The one-time canonical intro (Theo's funeral / need surfacing, brief §2.1) has been consumed. Set true at the first `prepare`; repeat expeditions skip the narrative beat so they never replay a story contradiction (brief §2.17)."
+        },
+        "route_anchor_operations_unlocked": {
+          "type": "boolean",
+          "description": "Limited route-anchor operations unlocked (brief §2.16) — set at first full success."
+        },
+        "completed_expeditions": {
+          "type": "number",
+          "description": "Count of completed expeditions (deterministic; supports repeatability, brief §2.17)."
+        }
+      },
+      "required": [
+        "overflow",
+        "canonical_intro_consumed",
+        "route_anchor_operations_unlocked",
+        "completed_expeditions"
+      ],
+      "additionalProperties": false,
+      "description": "Harbor-side A4 operations state (SaveBlob v4 `harbor_operations` block). Persists the unsafe Overflow holdings and the one-time unlock/intro flags."
     },
     "EmptyMapM0": {
       "type": "object",

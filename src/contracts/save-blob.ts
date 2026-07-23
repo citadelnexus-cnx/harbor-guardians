@@ -26,6 +26,16 @@
  *     + round-trip test) are the recorded basis for adding it. Instances
  *     carry lifecycle state and INERT staged-effect descriptors only — no
  *     effect execution exists (EVT5+ fail-loud).
+ *   - A4 (v4 — owner Alpha A4 authorization 2026-07-23, Option A): two blocks
+ *     are added for the Bounded First Playable Expedition Loop —
+ *     `expedition` (the idle/active expedition domain, brief §2/§3) and
+ *     `harbor_operations` (the unsafe Overflow holdings + the one-time
+ *     intro/unlock flags, brief §2.12/§2.16/§2.17). Save/Load §16 predates
+ *     the expedition loop; A4's authorization + the v3→v4 migration (committed
+ *     v3 fixture + round-trip test) are the recorded basis. No gameplay
+ *     numbers here — these are player STATE; A4 content lives in the /data
+ *     expedition seed (DC1). The Claim Ledger blocks are UNTOUCHED by A4 (no
+ *     new source_type, no reward generation — A4 exclusions).
  *   - `combat_suspend?` (optional in §16) is deliberately absent until the
  *     D16/C8 combat-suspend feature lands; its migration adds it.
  *
@@ -48,15 +58,17 @@
 import type { ClaimLedgerState, PendingRewardResolution } from "./claim-ledger.js";
 import type { CoreResource, RaidPhase } from "./enums.js";
 import type { EventInstance } from "./event.js";
+import type { ExpeditionState, HarborOperationsState } from "./expedition.js";
 
 /**
  * Current save schema version (infrastructure version, not a gameplay value).
  * Bumping it is a migration event: function + fixture + round-trip test
  * (Save/Load §14; the M6 Migration Notice is FUTURE BUILD with the inbox).
  * v1 = M0/A1 empty-ledger shell · v2 = A2 claim_ledger + pending blocks ·
- * v3 = A3 events block (lifecycle instances, inert effects).
+ * v3 = A3 events block (lifecycle instances, inert effects) ·
+ * v4 = A4 expedition + harbor_operations blocks (first playable loop).
  */
-export const SAVE_SCHEMA_VERSION = 3;
+export const SAVE_SCHEMA_VERSION = 4;
 
 /** Save/Load §1/§2: versions + absolute UTC timestamp (ISO-8601). */
 export interface SaveMeta {
@@ -118,6 +130,10 @@ export interface SaveBlob {
   pending_reward_resolution: PendingRewardResolution[];
   /** Mid-flight event-lifecycle instances (Doc 15 §2; EVT3) — real shape since A3 (v3). Inert staged effects only; no effect execution exists. */
   events: EventInstance[];
+  /** Bounded First Playable Expedition Loop domain (brief §2/§3) — real shape since A4 (v4). */
+  expedition: ExpeditionState;
+  /** Unsafe Overflow holdings + one-time intro/unlock flags (brief §2.12/§2.16/§2.17) — real shape since A4 (v4). */
+  harbor_operations: HarborOperationsState;
   /** system_message records (Save/Load §12, M8). */
   system_messages: EmptyListM0;
   /** Per-faction Merit standing (soulbound; never in 3S bands — DC6/FCT1). */

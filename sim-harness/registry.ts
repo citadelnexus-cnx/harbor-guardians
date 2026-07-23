@@ -22,10 +22,16 @@
  * EVT3, EVT4 at A3 scope (checks in event-checks.ts — test fixtures only,
  * no real event content, no effect execution, no event reward source; the
  * A2 test_supplied boundary is unchanged).
+ * Implemented at Alpha A4 Option A (owner A4 authorization 2026-07-23 —
+ * Bounded First Playable Expedition Loop): OPS1 (check in
+ * expedition-checks.ts — expedition cancel/refund routing over the canonical
+ * seed), and S5/S7 extended with the expedition-bearing round-trip + crash
+ * proofs (proofs.ts). A4 introduces no new event reward source and does not
+ * touch the Claim Ledger; the A2/A3 boundaries are unchanged.
  * Everything else remains a fail-loud stub — every remaining invariant binds
- * to a system that does not exist at A3 (production, offline, raids, cargo,
- * inbox, grants, event reward delivery/chains), and converting any of them
- * would claim untested capability.
+ * to a system that does not exist at A4 (production, offline, raids, full
+ * cargo, inbox, grants, event reward delivery/chains, combat, factions), and
+ * converting any of them would claim untested capability.
  *
  * Governing docs (statements condensed from, and audited against):
  *   - SIM_HARNESS_ACCEPTANCE_SPEC v0.6.2 §4.1–§4.8 (E, L, M, C, CARGO, S, OPS, UX1)
@@ -50,6 +56,8 @@ import { join } from "node:path";
 import {
   proveCrashDuringWriteSurvival,
   proveEmptyStateRoundTrip,
+  proveExpeditionCrashSurvival,
+  proveExpeditionStateRoundTrip,
   proveLedgerStateRoundTrip,
   proveStockedStateRoundTrip,
   type ProofResult,
@@ -61,6 +69,8 @@ import {
   checkDc5ValidationGate,
   checkDc6CoreResourceOnly,
 } from "./data-contract-checks.js";
+import { checkOps1CancelRefund } from "./expedition-checks.js";
+import { loadExpeditionSeed } from "./expedition-seed.js";
 import {
   checkEvt1PureDataEvents,
   checkEvt2DeterministicTransitions,
@@ -271,7 +281,7 @@ export const INVARIANT_REGISTRY: readonly InvariantEntry[] = [
     "S5",
     "S",
     "Save/load round-trip preserves world clock, storage states (incl. Crowns), threat phase, queues, Claim Ledger (incl. Story Claims, partial remainders, pending_reward_resolution), System Inbox, and combat suspend snapshot if present.",
-    `${SIM} §4.6 + SAVE_LOAD_TIME_RECONCILIATION_SPEC v0.5 §16 (M0: empty shell; A1: + stocked 3S bands; A2: + Claim Ledger/Story Claims/pending)`,
+    `${SIM} §4.6 + SAVE_LOAD_TIME_RECONCILIATION_SPEC v0.5 §16 (M0: empty shell; A1: + stocked 3S bands; A2: + Claim Ledger/Story Claims/pending; A4: + expedition/harbor_operations blocks)`,
     () => {
       const empty = runSaveProof(proveEmptyStateRoundTrip);
       if (!empty.pass) return empty;
@@ -281,9 +291,13 @@ export const INVARIANT_REGISTRY: readonly InvariantEntry[] = [
         proveLedgerStateRoundTrip(dir, validate, loadStorageSeed(), loadClaimLedgerRulesSeed()),
       );
       if (!ledger.pass) return ledger;
+      const expedition = runSaveProof((dir, validate) =>
+        proveExpeditionStateRoundTrip(dir, validate, loadStorageSeed(), loadExpeditionSeed()),
+      );
+      if (!expedition.pass) return expedition;
       return {
         pass: true,
-        evidence: `[empty shell] ${empty.evidence} [A1 stocked state] ${stocked.evidence} [A2 ledger state] ${ledger.evidence}`,
+        evidence: `[empty shell] ${empty.evidence} [A1 stocked state] ${stocked.evidence} [A2 ledger state] ${ledger.evidence} [A4 expedition state] ${expedition.evidence}`,
       };
     },
   ),
@@ -292,15 +306,33 @@ export const INVARIANT_REGISTRY: readonly InvariantEntry[] = [
     "S7",
     "S",
     "Atomic save integrity: temp write → schema validate → flush → rename/swap → preserve prior good save; a simulated crash never corrupts the last known-good save and never duplicates rewards.",
-    `${SIM} §4.6 + SAVE_LOAD_TIME_RECONCILIATION_SPEC v0.5 §15 (A2: crash simulation over reward-bearing saves — no reward duplication)`,
-    () =>
-      runSaveProof((dir, validate) =>
+    `${SIM} §4.6 + SAVE_LOAD_TIME_RECONCILIATION_SPEC v0.5 §15 (A2: crash simulation over reward-bearing saves — no reward duplication; A4: + over expedition-bearing saves — no recovered-cargo duplication)`,
+    () => {
+      const reward = runSaveProof((dir, validate) =>
         proveCrashDuringWriteSurvival(dir, validate, loadStorageSeed(), loadClaimLedgerRulesSeed()),
-      ),
+      );
+      if (!reward.pass) return reward;
+      const expedition = runSaveProof((dir, validate) =>
+        proveExpeditionCrashSurvival(dir, validate, loadStorageSeed(), loadExpeditionSeed()),
+      );
+      if (!expedition.pass) return expedition;
+      return { pass: true, evidence: `[A2 reward-bearing] ${reward.evidence} [A4 expedition-bearing] ${expedition.evidence}` };
+    },
   ),
 
   // ── Operations suite (OPS1) — SIM spec §4.7 ───────────────────────────────
-  stub("OPS1", "OPS", "Cancel/refund routing: refunds return directly to Harbor stock (Safe→Exposed), obey Total 3S, never enter the Claim Ledger, never exceed 3S (cancellation blocks by default if it would), never silently deleted.", `${SIM} §4.7`),
+  // OPS1 converted stub → implemented at Alpha A4 (owner authorization
+  // 2026-07-23, Option A): the check drives expedition cancellation over the
+  // schema-validated seed, proving both branches (fresh-harbor full refund;
+  // 3S-breaching refund blocks and preserves). This is the OPS1 the Sim spec's
+  // "First playable" gate names (§ acceptance line) — A4 is that first playable.
+  implemented(
+    "OPS1",
+    "OPS",
+    "Cancel/refund routing: refunds return directly to Harbor stock (Safe→Exposed), obey Total 3S, never enter the Claim Ledger, never exceed 3S (cancellation blocks by default if it would), never silently deleted.",
+    `${SIM} §4.7 (A4 scope: expedition cancellation over the canonical seed — both refund and 3S-block branches)`,
+    () => checkOps1CancelRefund(loadStorageSeed(), loadExpeditionSeed()),
+  ),
 
   // ── UX invariant (UX1) — SIM spec §4.8 ────────────────────────────────────
   stub("UX1", "UX", "The System Inbox never transfers resources directly; message actions are Read / Acknowledge / Archive / View Reward Package; only Claim Ledger packages expose Claim; no inbox action mutates a resource total.", `${SIM} §4.8`),

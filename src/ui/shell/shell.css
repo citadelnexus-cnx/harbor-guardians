@@ -1,24 +1,178 @@
-/* M0 shell placeholder styling only — kept external so the strict CSP
+/* Alpha A4 minimal viewer styling — kept external so the strict CSP
    (default-src 'self') holds without inline-style exceptions. */
+:root {
+  --bg: #0d1c24;
+  --panel: #142b36;
+  --panel-2: #1b3746;
+  --ink: #d8e6ec;
+  --muted: #8fb0bd;
+  --accent: #57c4c9;
+  --safe: #57c4c9;
+  --exposed: #e0a852;
+  --overflow: #d9736b;
+}
+* {
+  box-sizing: border-box;
+}
 html,
 body {
-  height: 100%;
   margin: 0;
+  min-height: 100%;
 }
 body {
-  display: grid;
-  place-items: center;
-  background: #10222b;
-  color: #d8e6ec;
-  font-family: system-ui, sans-serif;
-  text-align: center;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: system-ui, -apple-system, Segoe UI, sans-serif;
+  line-height: 1.45;
+  padding: 1.25rem clamp(0.75rem, 4vw, 2.5rem) 2rem;
 }
-h1 {
-  font-size: 1.5rem;
-  font-weight: 600;
-  margin: 0 0 0.5rem;
-}
-p {
+header h1 {
+  font-size: 1.4rem;
+  font-weight: 700;
   margin: 0;
-  opacity: 0.7;
+}
+.subtitle {
+  margin: 0.15rem 0 0;
+  color: var(--accent);
+  font-weight: 600;
+}
+.context {
+  margin: 0.35rem 0 0;
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+nav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin: 1rem 0 1.25rem;
+}
+nav button {
+  background: var(--panel);
+  color: var(--ink);
+  border: 1px solid var(--panel-2);
+  border-radius: 999px;
+  padding: 0.4rem 0.9rem;
+  font: inherit;
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+nav button[aria-selected="true"] {
+  background: var(--accent);
+  color: #06232a;
+  border-color: var(--accent);
+  font-weight: 600;
+}
+main {
+  display: grid;
+  gap: 0.75rem;
+}
+.step {
+  background: var(--panel);
+  border: 1px solid var(--panel-2);
+  border-radius: 0.6rem;
+  padding: 0.8rem 1rem;
+}
+.step-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+.cmd {
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+.phase {
+  color: var(--accent);
+  font-size: 0.8rem;
+  font-variant: small-caps;
+}
+.note {
+  margin: 0.35rem 0 0.7rem;
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+.bars {
+  display: grid;
+  gap: 0.3rem;
+}
+.bar-row {
+  display: grid;
+  grid-template-columns: 5.5rem 1fr auto;
+  gap: 0.6rem;
+  align-items: center;
+  font-size: 0.8rem;
+}
+.bar-label {
+  color: var(--muted);
+}
+.bar {
+  position: relative;
+  height: 0.75rem;
+  background: var(--panel-2);
+  border-radius: 999px;
+  overflow: hidden;
+  display: flex;
+}
+.bar span {
+  display: block;
+  height: 100%;
+}
+.bar .seg-safe {
+  background: var(--safe);
+}
+.bar .seg-exposed {
+  background: var(--exposed);
+}
+.bar .seg-overflow {
+  background: var(--overflow);
+}
+.bar-val {
+  color: var(--ink);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.cargo {
+  margin-top: 0.55rem;
+  font-size: 0.82rem;
+  color: var(--exposed);
+}
+.cargo.empty {
+  color: var(--muted);
+}
+.legend {
+  display: flex;
+  gap: 1rem;
+  flex-wrap: wrap;
+  margin: 0.25rem 0 0;
+  font-size: 0.78rem;
+  color: var(--muted);
+}
+.legend span::before {
+  content: "";
+  display: inline-block;
+  width: 0.7rem;
+  height: 0.7rem;
+  border-radius: 2px;
+  margin-right: 0.3rem;
+  vertical-align: middle;
+}
+.legend .l-safe::before {
+  background: var(--safe);
+}
+.legend .l-exposed::before {
+  background: var(--exposed);
+}
+.legend .l-overflow::before {
+  background: var(--overflow);
+}
+footer {
+  margin-top: 1.5rem;
+  color: var(--muted);
+  font-size: 0.78rem;
+}
+.error {
+  color: var(--overflow);
 }

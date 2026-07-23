@@ -18,6 +18,8 @@
     "test:harbor": "tsx --test tests/harbor-state.test.ts",
     "test:ledger": "tsx --test tests/claim-ledger.test.ts",
     "test:events": "tsx --test tests/event-lifecycle.test.ts",
+    "test:expedition": "tsx --test tests/expedition.test.ts",
+    "ui:playthrough": "tsx scripts/build-playthrough.mts",
     "tauri": "tauri"
   },
   "devDependencies": {

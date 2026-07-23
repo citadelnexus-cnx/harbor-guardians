@@ -21,6 +21,16 @@
  *     Every A2 block — resources, claim_ledger packages/story claims,
  *     pending records — passes through byte-preserved: nothing is
  *     transformed, created, or lost.
+ *   - v3 → v4 (Alpha A4, owner authorization 2026-07-23, Option A): the
+ *     `expedition` and `harbor_operations` blocks (the Bounded First Playable
+ *     Expedition Loop) are added at identity — an idle expedition domain and
+ *     an empty overflow with the intro/unlock flags false. A v3 save cannot
+ *     legally carry either key (additionalProperties=false in the v3 schema),
+ *     so a "v3" save that already has one was hand-edited or corrupted and is
+ *     refused loudly (same tamper stance as v1→v2 / v2→v3). Every A1–A3 block
+ *     passes through byte-preserved: no player value is transformed, created,
+ *     or lost, and the migration is idempotent (re-running it on a v4 save is
+ *     a no-op — the chain stops once the version reaches current).
  *
  * The Save/Load §14 Migration Notice ("written to the System Inbox, M6") is
  * FUTURE BUILD: no System Inbox exists at A2 (Doc 04A unimplemented; M6
@@ -123,10 +133,42 @@ function migrateV2ToV3(blob: RawSave): RawSave {
   };
 }
 
+/**
+ * v3 → v4: the save gains its identity `expedition` and `harbor_operations`
+ * blocks (A4 shape). Pure; input untouched. The v3 schema's
+ * additionalProperties=false means a real v3 save can never contain either
+ * key — one already present means the file was hand-edited or corrupted
+ * outside this build, and is refused loudly rather than silently trusted or
+ * dropped (same tamper stance as the earlier migrations). All A1–A3 player
+ * value (resources, ledger, pending, events) passes through untouched.
+ */
+function migrateV3ToV4(blob: RawSave): RawSave {
+  if ("expedition" in blob) {
+    throw new SaveMigrationError("v3 save already carries an expedition block, but v3 could hold none — refusing to migrate");
+  }
+  if ("harbor_operations" in blob) {
+    throw new SaveMigrationError(
+      "v3 save already carries a harbor_operations block, but v3 could hold none — refusing to migrate",
+    );
+  }
+  return {
+    ...blob,
+    meta: { ...(blob.meta as RawSave), save_schema_version: rawVersion(blob) + 1 },
+    expedition: { phase: "idle", active: null, next_expedition_index: 0, last_command_id: null },
+    harbor_operations: {
+      overflow: {},
+      canonical_intro_consumed: false,
+      route_anchor_operations_unlocked: false,
+      completed_expeditions: 0,
+    },
+  };
+}
+
 /** Ordered migration chain: MIGRATIONS[v] brings a version-v save to v+1. */
 const MIGRATIONS: Readonly<Record<number, (blob: RawSave) => RawSave>> = {
   1: migrateV1ToV2,
   2: migrateV2ToV3,
+  3: migrateV3ToV4,
 };
 
 /**

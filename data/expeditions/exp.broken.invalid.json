@@ -1,0 +1,41 @@
+{
+  "schema_version": "0.1.0",
+  "content": {
+    "content_id": "exp.broken",
+    "route": { "route_id": "route.broken", "legs": 1 },
+    "outpost": { "outpost_id": "outpost.broken", "condition": "damaged" },
+    "supply_set": {
+      "Provisions": 50,
+      "Merit": 10
+    },
+    "overflow_cap_multiplier": 3,
+    "salvage_total": {
+      "full_success": 100,
+      "partial_success": 50,
+      "retreat": 10,
+      "forced_withdrawal": 0
+    },
+    "guardian_primary_salvage": {
+      "gdn.raxa": "Iron",
+      "gdn.tarin": "Provisions",
+      "gdn.nova": "Crowns"
+    },
+    "outcome_readiness": {
+      "full_success": { "vessel": "ready", "crew": "ready", "guardian": "ready" },
+      "partial_success": { "vessel": "ready", "crew": "damaged", "guardian": "ready" },
+      "retreat": { "vessel": "damaged", "crew": "ready", "guardian": "ready" },
+      "forced_withdrawal": { "vessel": "damaged", "crew": "damaged", "guardian": "damaged" }
+    },
+    "event": { "event_id": "evt.a4.broken", "min_provisions_to_begin": 0 }
+  },
+  "value_metadata": [
+    {
+      "id": "exp.broken.note",
+      "path": "content.overflow_cap_multiplier",
+      "unit": "flat",
+      "gate": "A4",
+      "source_doc_section": "negative fixture — deliberately admits a non-CoreResource key (Merit) into supply_set; the generated schema MUST reject it (DC5/DC6-adjacent)",
+      "invariant_refs": ["DC5"]
+    }
+  ]
+}

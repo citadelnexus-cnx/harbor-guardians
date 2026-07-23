@@ -27,6 +27,7 @@ import { join } from "node:path";
 import Ajv from "ajv";
 import {
   CLAIM_LEDGER_RULES_SCHEMA_FILE,
+  EXPEDITION_SEED_SCHEMA_FILE,
   RESOURCE_STORAGE_SCHEMA_FILE,
   SCHEMA_BUILDS,
   SCHEMA_FILE,
@@ -48,6 +49,7 @@ const SEED_SETS = [
   { dir: "data/guardians", schemaFile: SCHEMA_FILE, payloadRoot: "kit", structuralCheck: null },
   { dir: "data/economy", schemaFile: RESOURCE_STORAGE_SCHEMA_FILE, payloadRoot: "storage", structuralCheck: check3SModel },
   { dir: "data/rewards", schemaFile: CLAIM_LEDGER_RULES_SCHEMA_FILE, payloadRoot: "rules", structuralCheck: checkClaimLedgerRules },
+  { dir: "data/expeditions", schemaFile: EXPEDITION_SEED_SCHEMA_FILE, payloadRoot: "content", structuralCheck: checkExpeditionContent },
 ];
 
 // 1. Drift guard (D39: every schema must be generated, never hand-edited).
@@ -139,6 +141,35 @@ function checkClaimLedgerRules(file, seed) {
   }
   if (global < perResource) {
     fail(`${file}: Doc 04 §5 — max_global_active_packages (${global}) < max_unclaimed_packages_per_resource (${perResource})`);
+  }
+}
+
+/**
+ * A4 structural check (expedition seeds, brief §2/§3): the unsafe-Overflow cap
+ * multiplier is a positive integer; supply amounts are positive integers;
+ * salvage totals and the event trigger are non-negative integers; and each
+ * starting Guardian maps to a distinct CoreResource so the equal-total salvage
+ * is a genuinely DISTINCT composition per Guardian (brief §4 — distinct but
+ * equivalent sidegrades). The equal-MAGNITUDE half (one shared total per
+ * outcome) is structural in the shape and proven in tests/expedition.test.ts.
+ */
+function checkExpeditionContent(file, seed) {
+  const c = seed.content;
+  const posInt = (name, value) => {
+    if (!Number.isInteger(value) || value <= 0) fail(`${file}: A4 — ${name} must be a positive integer, got ${value}`);
+  };
+  const nonNegInt = (name, value) => {
+    if (!Number.isInteger(value) || value < 0) fail(`${file}: A4 — ${name} must be a non-negative integer, got ${value}`);
+  };
+  posInt("content.overflow_cap_multiplier", c.overflow_cap_multiplier);
+  posInt("content.route.legs", c.route.legs);
+  nonNegInt("content.event.min_provisions_to_begin", c.event.min_provisions_to_begin);
+  for (const [resource, amount] of Object.entries(c.supply_set)) posInt(`content.supply_set.${resource}`, amount);
+  for (const [outcome, total] of Object.entries(c.salvage_total)) nonNegInt(`content.salvage_total.${outcome}`, total);
+  const guardians = Object.keys(c.guardian_primary_salvage);
+  const resources = Object.values(c.guardian_primary_salvage);
+  if (new Set(resources).size !== guardians.length) {
+    fail(`${file}: A4 §4 — guardian_primary_salvage must map each Guardian to a DISTINCT resource (equivalent sidegrade), got ${resources.join(", ")}`);
   }
 }
 
