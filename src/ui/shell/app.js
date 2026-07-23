@@ -100,7 +100,8 @@ function renderActions() {
     return;
   }
   actions.forEach((action, i) => {
-    const btn = el("button", "action-btn", (i + 1) + ". " + action.label);
+    const danger = action.kind === "confirm_discard" ? " danger" : "";
+    const btn = el("button", "action-btn" + danger, (i + 1) + ". " + action.label);
     btn.setAttribute("type", "button");
     btn.addEventListener("click", () => perform(action));
     wrap.appendChild(btn);
@@ -124,6 +125,11 @@ function render() {
   document.getElementById("context").textContent =
     "Content: " + v.content_id + " · Route: " + v.route_id + " · Outpost: " + v.outpost_id;
   setMessage(v.message, false);
+  // A pending destructive discard gets a highlighted, clearly-distinct warning.
+  if (v.pending_discard) {
+    const m = document.getElementById("message");
+    m.className = "message destructive";
+  }
   renderStatus(v);
   renderStorage(v);
   renderActions();

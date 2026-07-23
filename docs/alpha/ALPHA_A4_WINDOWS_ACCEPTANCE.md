@@ -32,6 +32,24 @@ was rejected as not playable).
   **Owner retest of the full interactive flow is still pending** (see scenario F
   below).
 
+- **Finding 2 (destructive discard had no confirmation, corrected).** Owner
+  found that discard actions (e.g. "Discard 900 Iron from unsafe Overflow")
+  executed immediately and irreversibly, and could be triggered by the numbered
+  keyboard shortcuts — no confirmation, no cancel. **Correction (UI/controller
+  only):** selecting a discard now opens a **destructive-action confirmation**
+  ("Permanently discard N of a resource from a named band? … cannot be undone") offering exactly
+  **Confirm** and **Cancel**. Selecting mutates nothing (no authoritative
+  command, no stock change). **Cancel** clears it and changes nothing.
+  **Confirm** issues the existing authoritative `jettison` exactly once
+  (idempotent — a duplicate Confirm never double-discards) and returns to the
+  Harbor-management actions. While a confirmation is open, **only Confirm/Cancel
+  are offered** — every other management shortcut is suppressed, so a number key
+  cannot bypass it. The pending confirmation is **transient UI state, never
+  persisted**: saving during it stores only the last committed state, and
+  reload never executes a pending discard. Proven by six new
+  `tests/ui-controller.test.ts` safety tests. **Owner confirmation retest is
+  still pending** (see scenario F).
+
 ## What the desktop app is
 
 A Tauri 2 window (`src-tauri`) over the interactive frontend in
@@ -53,7 +71,7 @@ and number keys to run the whole loop without developer commands.
 | Lint (incl. generated engine + app.js) | `pnpm run lint` | PASS, 0 warnings |
 | Seed validation | `pnpm run schema:validate` | PASS (13 seeds / 4 sets) |
 | Invariant harness | `pnpm run sim:harness` | **A4 BATCH GREEN** — 132/17/115; determinism byte-identical @ seed 20260714 |
-| Interactive controller (UI→sim mapping, incl. blocked-unload recovery) | `pnpm run test:ui` | 14/14 |
+| Interactive controller (UI→sim mapping, blocked-unload recovery, discard confirmation) | `pnpm run test:ui` | 18/18 |
 | Expedition scenario matrix | `pnpm run test:expedition` | 15/15 |
 | Save/migration (incl. v3→v4) | `pnpm run test:save` | 25/25 |
 | A1–A3 regression | `pnpm run test:harbor` / `test:ledger` / `test:events` | 9/9 · 16/16 · 21/21 |
@@ -89,7 +107,7 @@ cargo run --locked         # or: pnpm run tauri dev
 | C | Repeat expedition | start a second expedition after B | loop runs again; completed count increments; no incorrect intro replay | ☐ |
 | D | Cancellation | Choose Guardian → Prepare → **Cancel**; then "Blocked-cancel demo" → Cancel | refund exact (stock restored); blocked-cancel branch preserves supplies (stays *preparing*) | ☐ |
 | E | Adverse outcome | resolve **forced withdrawal** (or retreat/partial) → Dock → Complete → Recover | readiness shows *damaged*; phase *recovering*; recover restores readiness | ☐ |
-| F | Overflow / blocked unload + recovery | "Overflow demo" → run to Dock → (blocked) **Free capacity** → discard from Overflow → **Resume unloading** → repeat until empty → **Complete** | Storage/Overflow fill; remainder **stays aboard (blocked)**; Complete refused until empty; discard frees room; resume drains cargo to zero; then Complete succeeds — **no dead-end** | ☐ |
+| F | Overflow / blocked unload + recovery + discard confirmation | "Overflow demo" → run to Dock → (blocked) **Free capacity** → select a discard → **confirm the destructive prompt** (try **Cancel** first — nothing changes) → **Resume unloading** → repeat until empty → **Complete** | Storage/Overflow fill; remainder **stays aboard (blocked)**; Complete refused until empty; selecting a discard shows a confirmation and changes nothing; Cancel is safe; Confirm discards once (a number key cannot bypass it); resume drains cargo to zero; then Complete succeeds — **no dead-end, no accidental discard** | ☐ |
 | G | Save & relaunch | at a non-Harbor phase click **Save**, close the window, relaunch | resumes the exact phase/state/actions; no reroll/duplication; complete the loop | ☐ |
 | H | Stability | throughout A–G | no crash, dead end, silent loss, duplicated value, invalid transition, or reroll | ☐ |
 

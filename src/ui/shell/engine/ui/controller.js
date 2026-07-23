@@ -64,6 +64,13 @@ export class ExpeditionController {
     message = "New game. Start an expedition from the Harbor.";
     /** True while the UI is in the bounded Harbor-management (free-capacity) view. */
     managementMode = false;
+    /**
+     * A destructive discard awaiting confirmation — transient UI state, never
+     * persisted. Selecting a discard sets this (mutating NOTHING); Confirm issues
+     * the authoritative jettison exactly once; Cancel clears it. `command_id` is
+     * captured at selection so the eventual jettison keeps its idempotency.
+     */
+    pendingDiscard = null;
     /** Monotonic command counter → stable, unique command ids (duplicate-resistant). */
     commandCounter = 0;
     constructor(storageSeed, expeditionSeed, seed, scenario = "fresh") {
@@ -163,6 +170,11 @@ export class ExpeditionController {
     }
     /** The actions offered from the current phase (what the UI renders as buttons). */
     availableActions() {
+        // While a destructive discard awaits confirmation, ONLY Confirm/Cancel are
+        // offered — every other Harbor-management shortcut is suppressed so a key
+        // press cannot bypass the confirmation (keyboard safety).
+        if (this.pendingDiscard)
+            return this.confirmationActions();
         const phase = this.domain.expedition.phase;
         switch (phase) {
             case "idle": {
@@ -252,6 +264,16 @@ export class ExpeditionController {
         actions.push({ kind: "back", label: "Back to dock" });
         return actions;
     }
+    /** The two-action destructive-discard confirmation (shown while a discard is pending). */
+    confirmationActions() {
+        const p = this.pendingDiscard;
+        if (!p)
+            return [];
+        return [
+            { kind: "confirm_discard", label: `Confirm discard — permanently remove ${p.amount} ${p.resource} from ${bandLabel(p.band)}` },
+            { kind: "cancel_discard", label: "Cancel — keep the material" },
+        ];
+    }
     /** Perform an offered action; rejects anything not currently available. */
     perform(action) {
         switch (action.kind) {
@@ -288,8 +310,30 @@ export class ExpeditionController {
                 if (!action.resource || !action.band || action.amount === undefined) {
                     return { ok: false, error: "incomplete jettison action", view: this.view(), applied: false, idempotent: false };
                 }
-                return this.apply({ command_id: action.command_id ?? this.nextCommandId("jettison"), kind: "jettison", resource: action.resource, band: action.band, amount: action.amount }, `Discarded ${action.amount} ${action.resource} from ${bandLabel(action.band)} — capacity freed. Resume unloading.`);
+                // SELECT only — open the destructive-action confirmation. Nothing is
+                // discarded and no authoritative command is issued until Confirm.
+                this.pendingDiscard = {
+                    resource: action.resource,
+                    band: action.band,
+                    amount: action.amount,
+                    command_id: action.command_id ?? this.nextCommandId("jettison"),
+                };
+                this.message = `Permanently discard ${action.amount} ${action.resource} from ${bandLabel(action.band)}? This removes the material for good and cannot be undone.`;
+                return { ok: true, view: this.view(), applied: true, idempotent: false };
             }
+            case "confirm_discard": {
+                const pending = this.pendingDiscard;
+                // No pending discard (e.g. a duplicate Confirm) — idempotent no-op, no discard.
+                if (!pending)
+                    return { ok: true, view: this.view(), applied: false, idempotent: true };
+                // Clear the pending prompt BEFORE issuing, so a second Confirm cannot re-issue.
+                this.pendingDiscard = null;
+                return this.apply({ command_id: pending.command_id, kind: "jettison", resource: pending.resource, band: pending.band, amount: pending.amount }, `Discarded ${pending.amount} ${pending.resource} from ${bandLabel(pending.band)} — capacity freed. Resume unloading.`);
+            }
+            case "cancel_discard":
+                this.pendingDiscard = null;
+                this.message = "Discard cancelled. Nothing was removed; the material is preserved.";
+                return { ok: true, view: this.view(), applied: true, idempotent: false };
             case "resume_unload":
                 this.managementMode = false;
                 return this.apply({ command_id: this.nextCommandId("unload"), kind: "unload" }, "Resumed unloading: moved what now fits; any remainder stays aboard, preserved.");
@@ -336,6 +380,9 @@ export class ExpeditionController {
             cargo_aboard: { ...active?.cargo_aboard },
             unload_blocked: isUnloadBlocked(this.domain, content),
             management_mode: this.managementMode && this.domain.expedition.phase === "docked",
+            pending_discard: this.pendingDiscard
+                ? { resource: this.pendingDiscard.resource, band: this.pendingDiscard.band, amount: this.pendingDiscard.amount }
+                : null,
             vessel_condition: active?.vessel_condition ?? null,
             crew_condition: active?.crew_condition ?? null,
             guardian_condition: active?.guardian_condition ?? null,

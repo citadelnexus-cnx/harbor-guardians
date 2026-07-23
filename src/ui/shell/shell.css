@@ -98,6 +98,20 @@ button:disabled {
   border-left-color: var(--bad);
   color: #f2c4bf;
 }
+.message.destructive {
+  border-left-color: var(--overflow);
+  background: #2a1614;
+  color: #f4c9c3;
+  font-weight: 600;
+}
+.action-btn.danger {
+  border-color: var(--overflow);
+  color: #f4c9c3;
+}
+.action-btn.danger:hover:not(:disabled) {
+  background: #3a1c19;
+  border-color: var(--overflow);
+}
 main {
   display: grid;
   gap: 0.85rem;
