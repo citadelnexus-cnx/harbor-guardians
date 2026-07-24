@@ -32,7 +32,8 @@ This document tracks phase progress and authorization state across the whole pro
 | Alpha A2 | CLOSED |
 | Alpha A3 | CLOSED |
 | Alpha A4 | CLOSED — Option A implementation merged (PR #21 → `main` `08f84de`, 2026-07-23); owner interactive Windows acceptance PASS; 132/17/115; save v4 |
-| Alpha A5–A6 | FUTURE |
+| HG-POST-A4-STABILIZATION-01 (non-phase stabilization lane) | AUTHORIZATION RECORD IN REVIEW — owner authorization 2026-07-23; source audit HG-POST-A4-INDEPENDENT-CODE-REVIEW-01 (Blocking 0 / High 3 / Medium 3 / Low 2 / Accepted Alpha limitations 3); implementation NOT STARTED; not Alpha A5; adds no gameplay; A4 stays CLOSED |
+| Alpha A5–A6 | FUTURE — NOT AUTHORIZED |
 | Beta | FUTURE |
 | Production | FUTURE |
 | Gameplay loop | Only the bounded A4 first-playable expedition loop (Option A) is authorized; every other/general gameplay loop remains NOT AUTHORIZED |
@@ -126,6 +127,21 @@ This document tracks phase progress and authorization state across the whole pro
 - **Result (at closure):** **132 registered / 17 implemented / 115 fail-loud** (adds OPS1 to the 16 prior); save schema **v4**. No unresolved blocking findings.
 - **Remaining blocked scope:** all A4 hard exclusions — combat; raids/theft; multiplayer/networking; fleet and full ship progression; crew recruitment and detailed crew systems; full Guardian progression; selectable party and battle formations; equipment and broad loot; full Cargo/Docked Cargo system; trading and markets; unrestricted Claim Ledger `source_type`s; general expedition reward generation; effect execution/dispatch beyond the bounded loop; full Harbor Inbox; full quest framework; Atlas/world traversal; factions; threat director; economy pulses; full city-builder departments; controller certification; deployment; production — plus Alpha A5 and later.
 - **Next valid action:** none under A4 — the phase is closed. Preparing an Alpha A5 architecture / authorization decision may begin **only if separately directed by the owner** via a new authorization record and bounded execution brief; no A5+ scope, deployment, or production work is authorized.
+
+### HG-POST-A4-STABILIZATION-01 (non-phase stabilization lane)
+
+- **Status:** AUTHORIZATION RECORD IN REVIEW — **implementation NOT STARTED.**
+- **Classification:** A bounded **post-Alpha-A4 integrity and verification stabilization lane**, over the CLOSED Alpha A4 implementation. **It is not an Alpha phase; it is not Alpha A5; it authorizes no new player capability.** Alpha A4 remains **CLOSED**; Alpha A5+ remains **NOT AUTHORIZED**.
+- **Decision date:** 2026-07-23 (owner authorization).
+- **Source audit:** HG-POST-A4-INDEPENDENT-CODE-REVIEW-01 — disposition Blocking **0** / High **3** (H1, H2, H3) / Medium **3** (M1, M2, M3) / Low **2** / Accepted Alpha limitations **3**.
+- **Controlling brief:** [`docs/stabilization/HG_POST_A4_STABILIZATION_01_EXECUTION_BRIEF_v0.1.md`](../stabilization/HG_POST_A4_STABILIZATION_01_EXECUTION_BRIEF_v0.1.md) (public-safe scope; authority from the private owner authorization record dated 2026-07-23, per `CLAUDE.md` §7).
+- **Baseline SHA:** `b4ff741a0e1ed4956e5eb3e2e2fabafe861a0b83` (`main` = `origin/main` at authorization time).
+- **Authorized remediation targets:** H1 — complete Alpha A4 CI gate; H2 — one unified `SaveBlob` validator enforced on both the Node and desktop paths; H3 — bounded, persisted, committed-command replay protection that survives intervening commands; M1 — controller semantic action-eligibility enforcement; M2 — pure, side-effect-free action enumeration; M3 — a narrow, tamper-safe protected-over-cap abstraction, implemented only under all its stated conditions or else DEFERRED WITH RATIONALE.
+- **Save-version boundary:** save schema **v5** + a deterministic **v4→v5** migration are conditionally authorized **only if technically required by H3**; otherwise replay protection must persist honestly under **v4** with no silent v4-contract mutation.
+- **Implemented invariants:** none (authorization record only). Expected default at implementation: **unchanged (132/17/115)** — stronger CI, unified validation, better command identity, and pure enumeration are not invariant conversions; any conversion requires a separate exact proof and owner review.
+- **Implementation branch (only after the authorization-record PR merges):** `stabilization/post-a4-integrity-01`. Single draft PR; the Implementer never marks ready and never merges.
+- **Remaining blocked scope:** all A4 hard exclusions, all Alpha A5+ scope, deployment, and production — unchanged. This lane adds no gameplay, routes, outposts, events, rewards, Guardians, party systems, Claim Ledger source types, networking, or packaging.
+- **Next authorization gate:** owner review and merge of the authorization-record PR (`docs/post-a4-stabilization-01-authorization`), after which implementation may begin on `stabilization/post-a4-integrity-01`.
 
 ### Alpha A5 / A6
 

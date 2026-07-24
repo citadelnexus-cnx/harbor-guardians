@@ -13,6 +13,7 @@ Alpha-phase planning documents. Governing rules: [`CLAUDE.md`](../../CLAUDE.md) 
 | **Alpha A3** — Expedition and Event Skeleton (Option A: lifecycle mechanics only) | CLOSED — owner authorization 2026-07-18; EVT1–EVT4 + save v2→v3 + integrity corrections (PR #18) |
 | **Alpha A4** — Bounded First Playable Expedition Loop (Option A only) | **CLOSED — OPTION A** — owner authorization 2026-07-23 (auth-record PR #20); implementation PR #21 squash-merged to `main` as `08f84deffd68a0b7eeeff47ab84612d877708d60`; closure date 2026-07-23. Delivered the bounded loop with OPS1 converted, save schema v4, and an interactive Windows player flow + atomic persistence bridge (per the PR #21 review). Invariant state **132 registered / 17 implemented / 115 fail-loud**; save **v4**. Owner-executed interactive Windows GUI acceptance returned **PASS (2026-07-23)** across scenarios A–H and destructive-discard safety ([`ALPHA_A4_WINDOWS_ACCEPTANCE.md`](ALPHA_A4_WINDOWS_ACCEPTANCE.md)). Next phase **NOT AUTHORIZED**. |
 | **Alpha A5+** | **NOT AUTHORIZED** — no scope, brief, or implementation permission exists |
+| **HG-POST-A4-STABILIZATION-01** — bounded post-A4 integrity & verification stabilization (non-phase) | **AUTHORIZATION RECORD IN REVIEW** — owner authorization 2026-07-23; a bounded **non-phase** stabilization lane over the CLOSED A4 implementation (H1–H3, M1–M2, conditional M3). Not Alpha A5; adds no gameplay; does **not** change any Alpha closure status. Public-safe scope in [`../stabilization/HG_POST_A4_STABILIZATION_01_EXECUTION_BRIEF_v0.1.md`](../stabilization/HG_POST_A4_STABILIZATION_01_EXECUTION_BRIEF_v0.1.md). |
 
 ## Closed Alpha A3 boundary
 
@@ -43,6 +44,10 @@ On **2026-07-23** the owner authorized **Alpha A4 Option A — Bounded First Pla
 - Starting Guardians (Raxa, Tarin, Nova) as **equivalent sidegrades only** — no superior rewards, guaranteed success, leveling, evolution, equipment, combat powers, bond tree, or roster.
 
 Only fully proven A4-scoped invariants were converted (OPS1 the sole conversion; S5/S7 extended); everything else stays fail-loud. The work ran on branch `alpha/a4-first-playable-expedition-loop` and shipped as draft PR #21, which — after independent review corrections (interactive player flow, blocked-unloading recovery, destructive-discard confirmation) and owner interactive Windows acceptance — was owner-promoted and squash-merged. **A4 is closed; no next Alpha phase is authorized.**
+
+## Post-A4 stabilization lane (non-phase; does not change any Alpha closure)
+
+On **2026-07-23** the owner authorized **HG-POST-A4-STABILIZATION-01** — a bounded post-Alpha-A4 integrity and verification stabilization lane (source audit HG-POST-A4-INDEPENDENT-CODE-REVIEW-01; public-safe scope in [`../stabilization/HG_POST_A4_STABILIZATION_01_EXECUTION_BRIEF_v0.1.md`](../stabilization/HG_POST_A4_STABILIZATION_01_EXECUTION_BRIEF_v0.1.md)). It is a **non-phase** lane over the closed A4 implementation and is recorded here only as a cross-reference: **it is not Alpha A5, authorizes no new player capability, and changes no Alpha closure status.** Alpha A4 stays CLOSED and Alpha A5+ stays NOT AUTHORIZED. Its bounded scope is stronger CI (H1), a unified `SaveBlob` validator on both save paths (H2), bounded committed-command replay protection (H3), controller action-eligibility enforcement (M1), pure action enumeration (M2), and a narrow, conditional protected-over-cap abstraction that is implemented only under all its stated conditions or else deferred with rationale (M3). Implementation is gated on merge of the authorization-record PR; work then runs branch-first on `stabilization/post-a4-integrity-01` as a single draft PR.
 
 ## Still outside the boundary
 
