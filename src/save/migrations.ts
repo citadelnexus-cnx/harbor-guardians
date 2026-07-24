@@ -31,6 +31,19 @@
  *     passes through byte-preserved: no player value is transformed, created,
  *     or lost, and the migration is idempotent (re-running it on a v4 save is
  *     a no-op — the chain stops once the version reaches current).
+ *   - v4 → v5 (post-A4 stabilization, owner HG-POST-A4-STABILIZATION-01
+ *     authorization 2026-07-23, H3): the `expedition` block's v4
+ *     `last_command_id: string | null` is replaced by the bounded
+ *     `committed_command_ids: string[]`. The record is seeded from the single
+ *     known v4 last_command_id, inventing NO prior history: `[]` at idle (the
+ *     per-expedition record resets there, and the idle last_command_id was a
+ *     completed lifecycle command whose phase has already advanced) or when it
+ *     was null; `[id]` for a mid-flight expedition, carrying the one real
+ *     in-flight id forward so the existing duplicate-command protection survives
+ *     the boundary. A "v4" save that already carries `committed_command_ids`, or
+ *     whose `last_command_id` is not a string/null, is impossible under the v4
+ *     schema and is refused loudly (same tamper stance as the earlier
+ *     migrations). Every other A0–A4 block passes through byte-preserved.
  *
  * The Save/Load §14 Migration Notice ("written to the System Inbox, M6") is
  * FUTURE BUILD: no System Inbox exists at A2 (Doc 04A unimplemented; M6
@@ -164,11 +177,56 @@ function migrateV3ToV4(blob: RawSave): RawSave {
   };
 }
 
+/**
+ * v4 → v5: the `expedition` block's `last_command_id` is replaced by the bounded
+ * `committed_command_ids` record (H3). Pure; input untouched. The record is
+ * seeded from the one known v4 last_command_id (no invented history), and a
+ * "v4" save whose expedition block is malformed, already carries
+ * `committed_command_ids`, or whose `last_command_id` is not a string/null was
+ * hand-edited or corrupted and is refused loudly. Every other A0–A4 block passes
+ * through untouched.
+ */
+function migrateV4ToV5(blob: RawSave): RawSave {
+  const expedition = blob.expedition;
+  if (expedition === null || typeof expedition !== "object" || Array.isArray(expedition)) {
+    throw new SaveMigrationError("v4 save has a malformed expedition block — refusing to guess (no invented state)");
+  }
+  const exp = expedition as RawSave;
+  if ("committed_command_ids" in exp) {
+    throw new SaveMigrationError(
+      "v4 save already carries committed_command_ids, but v4 could hold none — refusing to migrate",
+    );
+  }
+  const lastCommandId = exp.last_command_id;
+  if (lastCommandId !== null && (typeof lastCommandId !== "string" || lastCommandId === "")) {
+    throw new SaveMigrationError(
+      "v4 save has a malformed expedition.last_command_id (expected a non-empty string or null) — refusing to migrate",
+    );
+  }
+  // Seed the bounded record from the single known committed id (invent nothing).
+  // At idle the record must be empty (per-expedition reset — the v4 idle
+  // last_command_id was a complete/recover/cancel command whose phase has already
+  // advanced, so it is no longer relevant and dropping it loses no protection);
+  // mid-flight we carry the one in-flight id forward, preserving the existing
+  // duplicate-command protection across the boundary.
+  const idle = exp.phase === "idle";
+  const committed_command_ids = idle || lastCommandId === null ? [] : [lastCommandId];
+  const nextExpedition: RawSave = { ...exp };
+  delete nextExpedition.last_command_id;
+  nextExpedition.committed_command_ids = committed_command_ids;
+  return {
+    ...blob,
+    meta: { ...(blob.meta as RawSave), save_schema_version: rawVersion(blob) + 1 },
+    expedition: nextExpedition,
+  };
+}
+
 /** Ordered migration chain: MIGRATIONS[v] brings a version-v save to v+1. */
 const MIGRATIONS: Readonly<Record<number, (blob: RawSave) => RawSave>> = {
   1: migrateV1ToV2,
   2: migrateV2ToV3,
   3: migrateV3ToV4,
+  4: migrateV4ToV5,
 };
 
 /**

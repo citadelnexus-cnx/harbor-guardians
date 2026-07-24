@@ -502,22 +502,22 @@
           "type": "number",
           "description": "Monotonic counter driving the deterministic expedition stream (brief §3)."
         },
-        "last_command_id": {
-          "type": [
-            "string",
-            "null"
-          ],
-          "description": "The last applied command id — re-applying it is an idempotent no-op (brief §3)."
+        "committed_command_ids": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "The bounded, persisted record of committed command ids for the CURRENT expedition, in commit (insertion) order — oldest first. Re-applying ANY id still in this record is an idempotent no-op, so a duplicate is rejected even after intervening commands (HG-POST-A4-STABILIZATION-01 H3 — replaces the v4 `last_command_id`, which remembered only the immediately previous command). The record is scoped to one expedition (reset to `[]` when the expedition returns to idle) and additionally hard-capped at `COMMITTED_COMMAND_HISTORY_LIMIT` (FIFO eviction), so it is bounded twice over and never an unbounded global history. Persisted in SaveBlob v5."
         }
       },
       "required": [
         "phase",
         "active",
         "next_expedition_index",
-        "last_command_id"
+        "committed_command_ids"
       ],
       "additionalProperties": false,
-      "description": "The expedition domain state (SaveBlob v4 `expedition` block)."
+      "description": "The expedition domain state (SaveBlob v5 `expedition` block)."
     },
     "ExpeditionPhase": {
       "type": "string",

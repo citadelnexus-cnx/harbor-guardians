@@ -1,0 +1,13 @@
+# Harbor Guardians — line-ending policy.
+#
+# HG-POST-A4-STABILIZATION-01 (H1): the committed, GENERATED browser artifacts
+# below are byte-exact compared on every CI run — the `ui:playthrough --check`
+# drift guard and the engine build/drift check compare committed bytes to a
+# fresh generation, with no CRLF normalization. Pin them to LF so a Windows
+# `core.autocrlf=true` checkout cannot introduce false drift (the documented
+# Alpha A4 CRLF artifact). This is a TARGETED pin on generated outputs, not a
+# repository-wide line-ending or formatting rewrite.
+src/ui/shell/seeds.json          text eol=lf
+src/ui/shell/playthrough.json    text eol=lf
+src/ui/shell/engine/**           text eol=lf
+src/save/generated/**            text eol=lf

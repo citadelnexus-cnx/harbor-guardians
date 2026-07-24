@@ -15,7 +15,7 @@ const invoke = tauri && tauri.core ? tauri.core.invoke : null;
 
 let seeds = null;
 let controller = null;
-let currentActions = []; // the actions from the last render — reused by keyboard so a key and a click share one command id
+let currentActions = []; // the actions from the last render — reused by keyboard so a key and a click submit the same offered descriptor
 
 function el(tag, className, text) {
   const node = document.createElement(tag);
@@ -139,8 +139,9 @@ function render() {
 document.addEventListener("keydown", (e) => {
   if (!controller) return;
   const n = Number(e.key);
-  // Reuse the rendered action objects so a key press and a click share one
-  // command id (jettison stays double-activation safe).
+  // Reuse the rendered action descriptors so a key press and a click submit the
+  // same offered action (the destructive-discard confirmation + M1 authority keep
+  // jettison double-activation safe).
   if (Number.isInteger(n) && n >= 1 && n <= currentActions.length) {
     perform(currentActions[n - 1]);
     e.preventDefault();

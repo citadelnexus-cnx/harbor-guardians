@@ -31,8 +31,10 @@
  *     EVT1–EVT4 event lifecycle (brief §2.6): the embedded `event` instance is
  *     advanced deterministically; its staged effects are INERT (no effect
  *     execution — EVT5+ remain fail-loud).
- *   - Commands carry a stable `command_id`; re-applying the last command is an
- *     idempotent no-op (brief §3, duplicate-command resistance).
+ *   - Commands carry a stable `command_id`; re-applying any command id still in
+ *     the current expedition's bounded committed-command record is an idempotent
+ *     no-op (brief §3, duplicate-command resistance; HG-POST-A4-STABILIZATION-01
+ *     H3 — the record survives intervening commands, not just the last one).
  *
  * Governing docs:
  *   - ALPHA_A4_EXECUTION_BRIEF v0.1 §1–§13 (bounded scope, outcomes, overflow,
@@ -50,6 +52,30 @@
 
 import type { CoreResource } from "./enums.js";
 import type { EventInstance } from "./event.js";
+
+/**
+ * Hard cap on the persisted committed-command record
+ * (`ExpeditionState.committed_command_ids`) — HG-POST-A4-STABILIZATION-01 H3.
+ * This is an INFRASTRUCTURE bound (a replay-protection buffer size), not a
+ * gameplay number, so — like `SAVE_SCHEMA_VERSION` — it lives in the contracts
+ * layer, not a /data seed and not the DC1-scanned sim core.
+ *
+ * Derivation (why 64 is safe): the record only has to catch a delayed DUPLICATE
+ * of a command whose replay the strict phase machine would not already reject.
+ * Every lifecycle command (prepare/dispatch/arrive/resolve/dock/complete/
+ * recover) advances the phase, so a stale replay of one is rejected by the phase
+ * guard regardless of this record; the only commands that stay in the same phase
+ * — and so genuinely need duplicate protection across intervening commands — are
+ * the in-place docked commands (`unload`, `jettison`). A single expedition's
+ * whole command sequence (≈8 lifecycle commands + at most one discard per
+ * resource×band = 4×3 = 12, plus a handful of unload passes) is well under 64.
+ * Combined with the per-expedition RESET (the record clears when the expedition
+ * returns to idle), the record is bounded twice over and never grows into an
+ * unbounded global history. If a pathological session ever exceeded 64 commands,
+ * the OLDEST (already phase-guarded or long-past) ids are evicted first (FIFO),
+ * never a still-relevant recent one.
+ */
+export const COMMITTED_COMMAND_HISTORY_LIMIT = 64;
 
 /**
  * The three starting Guardians (brief §2.3/§4). These ids match the canonical
@@ -146,14 +172,24 @@ export interface ActiveExpedition {
   event: EventInstance | null;
 }
 
-/** The expedition domain state (SaveBlob v4 `expedition` block). */
+/** The expedition domain state (SaveBlob v5 `expedition` block). */
 export interface ExpeditionState {
   phase: ExpeditionPhase;
   active: ActiveExpedition | null;
   /** Monotonic counter driving the deterministic expedition stream (brief §3). */
   next_expedition_index: number;
-  /** The last applied command id — re-applying it is an idempotent no-op (brief §3). */
-  last_command_id: string | null;
+  /**
+   * The bounded, persisted record of committed command ids for the CURRENT
+   * expedition, in commit (insertion) order — oldest first. Re-applying ANY id
+   * still in this record is an idempotent no-op, so a duplicate is rejected even
+   * after intervening commands (HG-POST-A4-STABILIZATION-01 H3 — replaces the
+   * v4 `last_command_id`, which remembered only the immediately previous
+   * command). The record is scoped to one expedition (reset to `[]` when the
+   * expedition returns to idle) and additionally hard-capped at
+   * `COMMITTED_COMMAND_HISTORY_LIMIT` (FIFO eviction), so it is bounded twice
+   * over and never an unbounded global history. Persisted in SaveBlob v5.
+   */
+  committed_command_ids: string[];
 }
 
 /**
@@ -181,8 +217,9 @@ export interface HarborOperationsState {
 
 /**
  * A player command against the expedition domain. Every command carries a
- * stable `command_id`; the domain records the last applied id and treats a
- * repeat as an idempotent no-op (brief §3, duplicate-command resistance).
+ * stable `command_id`; the domain records committed ids in a bounded per-
+ * expedition record and treats a repeat of any retained id as an idempotent
+ * no-op (brief §3, duplicate-command resistance; H3).
  */
 export type ExpeditionCommand =
   | { command_id: string; kind: "prepare"; guardian_id: StartingGuardianId }

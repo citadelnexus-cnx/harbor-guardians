@@ -56,6 +56,7 @@
  * conservation/overflow/recovery/determinism/idempotency properties are proven
  * in tests/expedition.test.ts.
  */
+import { COMMITTED_COMMAND_HISTORY_LIMIT, } from "../contracts/expedition.js";
 import { createClaimLedgerState } from "./claim-ledger.js";
 import { advance, createEventInstance, } from "./event-lifecycle.js";
 import { CORE_RESOURCES, deposit, withdraw } from "./harbor-state.js";
@@ -79,9 +80,48 @@ export function isAtOutpostOutcome(outcome) {
 }
 /** The three starting Guardians (brief §2.3). */
 export const STARTING_GUARDIANS = ["gdn.raxa", "gdn.tarin", "gdn.nova"];
+/**
+ * Append a committed command id to the bounded per-expedition record, evicting
+ * the oldest ids (FIFO) if the hard cap is exceeded. Pure — returns a new array.
+ */
+function appendCommittedCommand(prior, commandId) {
+    const next = [...prior, commandId];
+    while (next.length > COMMITTED_COMMAND_HISTORY_LIMIT)
+        next.shift();
+    return next;
+}
+/**
+ * Shape validity of the persisted committed-command record (H3): a bounded,
+ * insertion-ordered list of non-empty, UNIQUE command ids that is empty exactly
+ * when the expedition is idle (per-expedition reset). A duplicate, over-cap, or
+ * non-empty-at-idle record is malformed or tampered and is refused loudly (never
+ * silently trusted or truncated). Exported so the Node save validator and the
+ * desktop/controller load path enforce the identical rule (H2 — one contract).
+ */
+export function assertCommittedCommandRecordShape(committed_command_ids, phase) {
+    if (!Array.isArray(committed_command_ids)) {
+        throw new ExpeditionInvariantError("committed_command_ids must be an array");
+    }
+    if (committed_command_ids.length > COMMITTED_COMMAND_HISTORY_LIMIT) {
+        throw new ExpeditionInvariantError(`committed_command_ids holds ${committed_command_ids.length} ids, exceeding the bound ${COMMITTED_COMMAND_HISTORY_LIMIT}`);
+    }
+    const seen = new Set();
+    for (const id of committed_command_ids) {
+        if (typeof id !== "string" || id === "") {
+            throw new ExpeditionInvariantError("committed_command_ids entries must be non-empty strings");
+        }
+        if (seen.has(id)) {
+            throw new ExpeditionInvariantError(`committed_command_ids contains a duplicate id "${id}" — malformed committed-command record`);
+        }
+        seen.add(id);
+    }
+    if (phase === "idle" && committed_command_ids.length > 0) {
+        throw new ExpeditionInvariantError("committed_command_ids must be empty at idle (per-expedition reset)");
+    }
+}
 /** Empty/identity expedition domain state (world-creation). */
 export function createExpeditionState() {
-    return { phase: "idle", active: null, next_expedition_index: 0, last_command_id: null };
+    return { phase: "idle", active: null, next_expedition_index: 0, committed_command_ids: [] };
 }
 /** Empty/identity harbor-operations state (world-creation). */
 export function createHarborOperationsState() {
@@ -233,6 +273,7 @@ export function assertExpeditionDomainValid(domain, content) {
     if (!Number.isInteger(exp.next_expedition_index) || exp.next_expedition_index < 0) {
         throw new ExpeditionInvariantError(`next_expedition_index must be a non-negative integer, got ${exp.next_expedition_index}`);
     }
+    assertCommittedCommandRecordShape(exp.committed_command_ids, exp.phase);
     if (!Number.isInteger(ops.completed_expeditions) || ops.completed_expeditions < 0) {
         throw new ExpeditionInvariantError(`completed_expeditions must be a non-negative integer, got ${ops.completed_expeditions}`);
     }
@@ -272,22 +313,37 @@ function anyDamaged(active) {
 }
 /**
  * Apply one command to the expedition domain. Pure and deterministic: inputs
- * are never mutated. Re-applying the last command id is an idempotent no-op
- * (brief §3, duplicate-command resistance); every illegal (phase, command)
- * pair throws and leaves the input unchanged. Returns the new domain plus full
- * accounting for value-moving commands (cancel refund, unload).
+ * are never mutated. Re-applying any command id still in the current
+ * expedition's bounded committed-command record is an idempotent no-op (brief
+ * §3, duplicate-command resistance; H3 — survives intervening commands); every
+ * illegal (phase, command) pair throws and leaves the input unchanged. Returns
+ * the new domain plus full accounting for value-moving commands (cancel refund,
+ * unload).
  */
 export function applyCommand(domain, command, ctx) {
-    // Idempotent duplicate-command guard: a repeat of the last applied command
-    // id is a no-op (e.g. a double-submitted button), never a second effect.
-    if (command.command_id !== "" && command.command_id === domain.expedition.last_command_id) {
+    // Idempotent duplicate-command guard (H3): a repeat of ANY command id still in
+    // the current expedition's bounded committed-command record is a no-op (e.g. a
+    // double-submitted button or a delayed duplicate), never a second effect —
+    // even after other commands have committed in between (the v4 build only
+    // remembered the immediately previous id).
+    if (command.command_id !== "" && domain.expedition.committed_command_ids.includes(command.command_id)) {
         return { domain, applied: false, idempotent: true };
     }
     if (command.command_id === "") {
         throw new ExpeditionInvariantError("command_id must be non-empty (stable command identity, brief §3)");
     }
     const content = ctx.content;
-    const stamp = (expedition) => ({ ...expedition, last_command_id: command.command_id });
+    // Stamp the committed record onto the RESULT expedition: reset to [] when the
+    // expedition has returned to idle (per-expedition scope — the transition
+    // commands into idle are themselves phase-guarded against replay), otherwise
+    // append this id to the bounded FIFO record.
+    const stamp = (expedition) => {
+        const returnedToIdle = expedition.phase === "idle" && expedition.active === null;
+        const committed_command_ids = returnedToIdle
+            ? []
+            : appendCommittedCommand(domain.expedition.committed_command_ids, command.command_id);
+        return { ...expedition, committed_command_ids };
+    };
     switch (command.kind) {
         case "prepare": {
             requirePhase(domain, "idle", command.kind);
