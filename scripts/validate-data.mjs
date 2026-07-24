@@ -33,6 +33,7 @@ import {
   SCHEMA_FILE,
   serializeSchema,
 } from "./build-schema.mjs";
+import { buildSaveValidatorSource, SAVE_VALIDATOR_FILE } from "./build-save-validator.mjs";
 
 let failures = 0;
 const fail = (msg) => {
@@ -60,6 +61,18 @@ for (const { file, build } of SCHEMA_BUILDS) {
     fail(`${file} drifts from src/contracts — run \`pnpm run schema:generate\`; hand-edits are forbidden (D39)`);
   } else {
     console.log(`ok    ${file} matches a fresh generation from src/contracts (D39 drift guard)`);
+  }
+}
+
+// 1b. Precompiled SaveBlob validator drift guard (H2): the committed browser-safe
+// validator must byte-match a fresh generation off the committed schema, so the
+// schema and its precompiled validator can never silently diverge.
+{
+  const committedValidator = readFileSync(SAVE_VALIDATOR_FILE, "utf8").replace(/\r\n/g, "\n");
+  if (committedValidator !== buildSaveValidatorSource()) {
+    fail(`${SAVE_VALIDATOR_FILE} drifts from the committed schema — run \`pnpm run schema:validator\` (H2 drift guard)`);
+  } else {
+    console.log(`ok    ${SAVE_VALIDATOR_FILE} matches a fresh generation off the committed schema (H2 drift guard)`);
   }
 }
 

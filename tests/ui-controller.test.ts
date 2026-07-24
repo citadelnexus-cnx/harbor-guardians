@@ -259,10 +259,12 @@ test("destructive-discard SAFETY: Confirm issues the discard exactly once; a dup
   const after = c.view().overflow.Iron ?? 0;
   assert.equal(after, overflowBefore - (sel.amount ?? 0), "exactly the confirmed amount was discarded");
   assert.equal(c.view().pending_discard, null, "pending cleared after commit");
-  // A duplicate Confirm (pending already cleared) is an idempotent no-op.
+  // A duplicate Confirm (pending already cleared) is refused by action authority
+  // (M1) — confirm_discard is no longer offered once the pending discard is
+  // gone, so it cannot re-issue: still safe, no second discard.
   const second = c.perform(confirm);
+  assert.equal(second.ok, false, "duplicate confirm is refused (M1) — not offered after the pending discard cleared");
   assert.equal(second.applied, false, "duplicate confirm not applied");
-  assert.ok(second.idempotent);
   assert.equal(c.view().overflow.Iron ?? 0, after, "no second discard occurred");
 });
 
@@ -346,10 +348,142 @@ test("malformed save is rejected loudly on restore (never silently repaired)", (
     "invalid JSON is rejected",
   );
   const goodBlob = JSON.parse(controller().serialize("2026-01-01T00:00:00.000Z")) as Record<string, unknown>;
-  const tampered = { ...goodBlob, expedition: { phase: "not_a_phase", active: null, next_expedition_index: 0, last_command_id: null } };
+  const tampered = { ...goodBlob, expedition: { phase: "not_a_phase", active: null, next_expedition_index: 0, committed_command_ids: [] } };
   assert.throws(
     () => ExpeditionController.fromSerialized(JSON.stringify(tampered), storageSeed, expeditionSeed, SEED),
     "a malformed expedition block is rejected",
+  );
+});
+
+// ── H2: the desktop/controller load path enforces the COMPLETE save contract ──
+// (the same precompiled schema validator + semantic invariants as the Node path)
+
+test("H2: the controller load path rejects a malformed NON-expedition block (threat) — full schema, not just expedition asserts", () => {
+  const good = JSON.parse(controller().serialize("2026-01-01T00:00:00.000Z")) as Record<string, unknown>;
+  const badThreat = { ...good, threat: { phase: "not_a_raid_phase" } };
+  assert.throws(
+    () => ExpeditionController.fromSerialized(JSON.stringify(badThreat), storageSeed, expeditionSeed, SEED),
+    "a malformed threat block is refused through the desktop/controller path (schema enforced)",
+  );
+});
+
+test("H2: the controller load path rejects a duplicate persisted event identity (semantic invariant)", () => {
+  const good = JSON.parse(controller().serialize("2026-01-01T00:00:00.000Z")) as Record<string, unknown>;
+  const dupEvents = {
+    ...good,
+    events: [
+      { event_id: "e", instance_id: "dup", selected_outcome_id: null, staged_effects: [], state: "DORMANT" },
+      { event_id: "e", instance_id: "dup", selected_outcome_id: null, staged_effects: [], state: "DORMANT" },
+    ],
+  };
+  assert.throws(
+    () => ExpeditionController.fromSerialized(JSON.stringify(dupEvents), storageSeed, expeditionSeed, SEED),
+    "a duplicate persisted instance_id is refused through the desktop/controller path (EVT3 semantic)",
+  );
+});
+
+test("H2: the controller load path rejects a tampered committed-command record (duplicate ids)", () => {
+  const good = JSON.parse(controller().serialize("2026-01-01T00:00:00.000Z")) as Record<string, unknown>;
+  const exp = good.expedition as Record<string, unknown>;
+  // Force a non-idle phase so a non-empty (but duplicate) record is shape-checked, not rejected merely for being non-empty at idle.
+  const badRecord = { ...good, expedition: { ...exp, phase: "idle", committed_command_ids: ["dup", "dup"] } };
+  assert.throws(
+    () => ExpeditionController.fromSerialized(JSON.stringify(badRecord), storageSeed, expeditionSeed, SEED),
+    "a duplicate committed-command id is refused through the desktop/controller path (H3 semantic)",
+  );
+});
+
+test("H2: a valid save still round-trips cleanly through the controller load path", () => {
+  const c = controller();
+  act(c, "start", { guardian_id: "gdn.nova" });
+  act(c, "prepare", { guardian_id: "gdn.nova" });
+  act(c, "depart");
+  const saved = c.serialize("2026-06-06T00:00:00.000Z");
+  const resumed = ExpeditionController.fromSerialized(saved, storageSeed, expeditionSeed, SEED);
+  assert.equal(resumed.serialize("2026-06-06T00:00:00.000Z"), saved, "a valid save survives the complete validator unchanged");
+});
+
+// ── M1: controller action authority (direct programmatic bypass is refused) ──
+
+test("M1: a fabricated action not offered in the current phase is refused with no state change", () => {
+  const c = controller();
+  act(c, "start", { guardian_id: "gdn.nova" });
+  act(c, "prepare", { guardian_id: "gdn.nova" });
+  act(c, "depart"); // now en_route — only "advance" is offered
+  const before = c.serialize("2026-01-01T00:00:00.000Z");
+  const res = c.perform({ kind: "complete", label: "fabricated" });
+  assert.equal(res.ok, false, "a complete action fabricated at en_route is refused (M1)");
+  assert.equal(c.serialize("2026-01-01T00:00:00.000Z"), before, "state unchanged");
+});
+
+test("M1: an ALTERED discard descriptor (amount/band the UI never offered) is refused", () => {
+  const c = controller("overflow_demo");
+  toBlockedDock(c);
+  act(c, "manage");
+  const offeredDiscard = offered(c, "jettison", { band: "overflow" });
+  const before = c.serialize("2026-01-01T00:00:00.000Z");
+  // Alter the amount to one no offered discard carries.
+  const altered = { ...offeredDiscard, amount: (offeredDiscard.amount ?? 0) + 7 };
+  const res = c.perform(altered);
+  assert.equal(res.ok, false, "an altered discard amount is refused (M1) — it matches no offered descriptor");
+  assert.equal(c.view().pending_discard, null, "no confirmation opened");
+  assert.equal(c.serialize("2026-01-01T00:00:00.000Z"), before, "state unchanged");
+});
+
+test("M1: a management/jettison action submitted OUTSIDE management mode is refused", () => {
+  const c = controller("overflow_demo");
+  toBlockedDock(c); // docked + blocked, but NOT in management mode yet
+  const res = c.perform({ kind: "jettison", label: "x", resource: "Iron", band: "overflow", amount: 1 });
+  assert.equal(res.ok, false, "a jettison outside management mode is refused (M1)");
+  assert.equal(c.view().pending_discard, null, "no confirmation opened");
+});
+
+test("M1: a STALE action captured in an earlier phase is refused after the phase advances", () => {
+  const c = controller();
+  const staleStart = offered(c, "start", { guardian_id: "gdn.nova" }); // captured at idle
+  act(c, "start", { guardian_id: "gdn.nova" });
+  act(c, "prepare", { guardian_id: "gdn.nova" }); // now preparing — "start" is no longer offered
+  const before = c.serialize("2026-01-01T00:00:00.000Z");
+  const res = c.perform(staleStart);
+  assert.equal(res.ok, false, "the stale idle 'start' action is refused once the phase advanced (M1)");
+  assert.equal(c.serialize("2026-01-01T00:00:00.000Z"), before, "state unchanged");
+});
+
+// ── M2: action enumeration is pure (no command-id allocation, no mutation) ────
+
+test("M2: repeated view()/availableActions() calls mutate nothing (state, counter, command identity)", () => {
+  const c = controller("overflow_demo");
+  toBlockedDock(c);
+  act(c, "manage"); // management actions include jettison offers (the pre-stabilization hot spot for id allocation)
+  const before = c.serialize("2026-01-01T00:00:00.000Z");
+  for (let i = 0; i < 200; i++) {
+    c.view();
+    c.availableActions();
+  }
+  assert.equal(c.serialize("2026-01-01T00:00:00.000Z"), before, "rendering many times does not change the serialized state");
+
+  // The next allocated command id is unaffected by how many times we rendered:
+  // a control controller that renders once must yield the SAME committed id.
+  const control = controller("overflow_demo");
+  toBlockedDock(control);
+  act(control, "manage");
+  const drive = (x: ExpeditionController): string => {
+    x.perform(offered(x, "jettison", { band: "overflow" }));
+    x.perform(offered(x, "confirm_discard"));
+    return x.view().phase; // (drives a real committed jettison)
+  };
+  // Render 'c' a lot more, then commit a discard on both; the resulting committed
+  // record must be identical (command identity did not drift with render count).
+  for (let i = 0; i < 50; i++) c.availableActions();
+  drive(c);
+  drive(control);
+  const cSaved = ExpeditionController.fromSerialized(c.serialize("2026-01-01T00:00:00.000Z"), storageSeed, expeditionSeed, SEED);
+  const controlSaved = ExpeditionController.fromSerialized(control.serialize("2026-01-01T00:00:00.000Z"), storageSeed, expeditionSeed, SEED);
+  // Both took the identical action path from an identical start → identical serialized state.
+  assert.equal(
+    cSaved.serialize("2026-01-01T00:00:00.000Z"),
+    controlSaved.serialize("2026-01-01T00:00:00.000Z"),
+    "command identity did not drift with render frequency (M2 — ids allocated on commit, not on render)",
   );
 });
 

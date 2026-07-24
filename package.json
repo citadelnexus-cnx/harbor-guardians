@@ -2,7 +2,7 @@
   "name": "harbor-guardians",
   "version": "0.0.0",
   "private": true,
-  "description": "Harbor Guardians — standalone city-builder × RPG hybrid. Milestone 0 scaffold.",
+  "description": "Harbor Guardians — standalone city-builder × RPG hybrid. Deterministic pure sim core (TypeScript) with a Tauri 2 desktop shell; Alpha A4 bounded first-playable expedition loop (closed) plus post-A4 integrity/verification stabilization.",
   "type": "module",
   "packageManager": "pnpm@10.12.1",
   "engines": {
@@ -11,8 +11,9 @@
   "scripts": {
     "typecheck": "tsc --noEmit",
     "lint": "oxlint .",
-    "schema:generate": "node scripts/generate-schema.mjs",
+    "schema:generate": "node scripts/generate-schema.mjs && node scripts/build-save-validator.mjs",
     "schema:validate": "node scripts/validate-data.mjs",
+    "schema:validator": "node scripts/build-save-validator.mjs",
     "sim:harness": "tsx sim-harness/run.ts",
     "test:save": "tsx --test tests/save-load.test.ts",
     "test:harbor": "tsx --test tests/harbor-state.test.ts",
@@ -20,7 +21,7 @@
     "test:events": "tsx --test tests/event-lifecycle.test.ts",
     "test:expedition": "tsx --test tests/expedition.test.ts",
     "test:ui": "tsx --test tests/ui-controller.test.ts",
-    "ui:engine": "tsc -p tsconfig.engine.json",
+    "ui:engine": "tsc -p tsconfig.engine.json && node scripts/copy-engine-assets.mjs",
     "ui:playthrough": "tsx scripts/build-playthrough.mts",
     "ui:build": "pnpm run ui:engine && pnpm run ui:playthrough",
     "tauri": "tauri"

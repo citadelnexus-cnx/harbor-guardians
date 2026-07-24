@@ -10,13 +10,16 @@
  * tests/ui-controller.test.ts.
  *
  * Persistence uses the real, tested pure pieces: `canonicalSerialize` +
- * `createEmptySaveBlob` to build a v4 SaveBlob, `migrateSaveBlobToCurrent` to
- * bring a loaded blob current, and the sim's own structural invariants
+ * `createEmptySaveBlob` to build the current SaveBlob, `migrateSaveBlobToCurrent`
+ * to bring a loaded blob current, and — as of HG-POST-A4-STABILIZATION-01 (H2) —
+ * the SHARED, complete `assertSaveBlobValid` (the precompiled generated schema
+ * validator + every semantic invariant) both BEFORE persistence and AFTER
+ * migration on load, so the desktop path enforces the exact same save contract
+ * as the Node/test pipeline. The sim's domain-specific structural invariants
  * (`assertExpeditionDomainValid`, `fromResourceBands`, `assertClaimStateValid`)
- * to reject malformed state loudly on load. File I/O + the ajv schema gate live
- * in the Node/test save pipeline (unchanged); the desktop bridge writes/reads
- * through the Rust command and validates with these shared structural asserts —
- * a deliberate Alpha bound, documented in ALPHA_A4_WINDOWS_ACCEPTANCE.md.
+ * still run on load as defense in depth (they also check the /data-seeded
+ * overflow cap the schema cannot). Malformed state is refused loudly; nothing is
+ * accepted into controller state until validation succeeds.
  *
  * Governing docs: ALPHA_A4_EXECUTION_BRIEF v0.1 §2 (player-facing loop), §3
  * (deterministic content + duplicate-resistant commands); CLAUDE.md §5 (no
@@ -59,6 +62,7 @@ import {
 import { canonicalSerialize } from "../save/canonical-json.js";
 import { createEmptySaveBlob } from "../save/empty-save.js";
 import { migrateSaveBlobToCurrent } from "../save/migrations.js";
+import { assertSaveBlobValid } from "../save/save-semantics.js";
 
 /** A player intent the UI can offer, resolved against the current phase. */
 export type UiActionKind =
@@ -90,8 +94,6 @@ export interface UiAction {
   resource?: CoreResource;
   band?: JettisonBand;
   amount?: number;
-  /** A stable command id for repeatable-in-place actions (jettison) so a double-click is an idempotent no-op. */
-  command_id?: string;
 }
 
 /** A renderable snapshot of the whole player-visible state. */
@@ -349,9 +351,12 @@ export class ExpeditionController {
    * Harbor-management actions (blocked-unload recovery): for each blocking
    * resource still aboard, offer a bounded, explicit DISCARD from a band that
    * holds stock (unsafe Overflow first, then Exposed, then Safe) to free
-   * capacity — plus Resume unloading and Back. Each discard carries a STABLE
-   * command id so a double-click is an idempotent no-op (never a double
-   * discard). Cargo is never touched here; it stays aboard, preserved.
+   * capacity — plus Resume unloading and Back. Pure enumeration (M2): the
+   * offered discard descriptors are (resource, band, amount) only and carry NO
+   * command id — a command id is allocated only when a discard is SELECTED
+   * (perform → jettison), so repeated rendering never advances the command
+   * counter or changes command identity. Cargo is never touched here; it stays
+   * aboard, preserved.
    */
   private managementActions(): UiAction[] {
     const actions: UiAction[] = [];
@@ -372,7 +377,6 @@ export class ExpeditionController {
           actions.push({
             kind: "jettison",
             label: `Discard ${discard} ${resource} from ${bandLabel(bandName)} (free capacity)`,
-            command_id: this.nextCommandId("jettison"),
             resource,
             band: bandName,
             amount: discard,
@@ -395,8 +399,55 @@ export class ExpeditionController {
     ];
   }
 
-  /** Perform an offered action; rejects anything not currently available. */
+  /**
+   * True iff `action` semantically matches one of the actions the controller is
+   * CURRENTLY offering (M1). Matching is by stable semantic descriptor (kind +
+   * the fields that discriminate one offered action from another) — never object
+   * identity — so a stale, fabricated, or altered descriptor (wrong outcome,
+   * altered discard amount/band/resource, a management action outside management
+   * mode, a jettison/confirm with no matching pending discard) does not match and
+   * is refused.
+   */
+  private actionIsOffered(action: UiAction): boolean {
+    return this.availableActions().some((offered) => ExpeditionController.actionsMatch(offered, action));
+  }
+
+  private static actionsMatch(offered: UiAction, incoming: UiAction): boolean {
+    if (offered.kind !== incoming.kind) return false;
+    switch (offered.kind) {
+      case "start":
+      case "prepare":
+        return offered.guardian_id === incoming.guardian_id;
+      case "resolve":
+        return offered.outcome === incoming.outcome;
+      case "jettison":
+        return (
+          offered.resource === incoming.resource &&
+          offered.band === incoming.band &&
+          offered.amount === incoming.amount
+        );
+      default:
+        return true;
+    }
+  }
+
+  /**
+   * Perform an offered action. Enforces action authority (M1): the submitted
+   * action must match an action the controller is currently offering, else it is
+   * refused with no state change — a direct programmatic caller cannot execute a
+   * stale, fabricated, altered, or currently-unavailable action. The
+   * authoritative sim's phase/domain guards remain as defense in depth.
+   */
   perform(action: UiAction): PerformResult {
+    if (!this.actionIsOffered(action)) {
+      return {
+        ok: false,
+        error: `action "${action.kind}" is not offered in the current state — refused (M1 action authority)`,
+        view: this.view(),
+        applied: false,
+        idempotent: false,
+      };
+    }
     switch (action.kind) {
       case "start":
         return action.guardian_id ? this.selectGuardian(action.guardian_id) : { ok: false, error: "no guardian", view: this.view() };
@@ -429,12 +480,15 @@ export class ExpeditionController {
           return { ok: false, error: "incomplete jettison action", view: this.view(), applied: false, idempotent: false };
         }
         // SELECT only — open the destructive-action confirmation. Nothing is
-        // discarded and no authoritative command is issued until Confirm.
+        // discarded and no authoritative command is issued until Confirm. The
+        // stable command id is allocated HERE, on selection (M2 — never during
+        // action enumeration), and captured so the eventual jettison stays
+        // idempotent (a duplicate Confirm never double-discards).
         this.pendingDiscard = {
           resource: action.resource,
           band: action.band,
           amount: action.amount,
-          command_id: action.command_id ?? this.nextCommandId("jettison"),
+          command_id: this.nextCommandId("jettison"),
         };
         this.message = `Permanently discard ${action.amount} ${action.resource} from ${bandLabel(action.band)}? This removes the material for good and cannot be undone.`;
         return { ok: true, view: this.view(), applied: true, idempotent: false };
@@ -528,9 +582,16 @@ export class ExpeditionController {
     };
   }
 
-  /** Canonical JSON string for persistence (the exact bytes the Rust bridge writes). */
+  /**
+   * Canonical JSON string for persistence (the exact bytes the Rust bridge
+   * writes). Runs the complete shared validation BEFORE persistence (H2) so the
+   * desktop save path can never write a malformed SaveBlob — invalid state
+   * throws here and the Rust bridge is never handed it.
+   */
   serialize(lastSavedUtc: string): string {
-    return canonicalSerialize(this.toSaveBlob(lastSavedUtc));
+    const blob = this.toSaveBlob(lastSavedUtc);
+    assertSaveBlobValid(blob);
+    return canonicalSerialize(blob);
   }
 
   /**
@@ -546,24 +607,41 @@ export class ExpeditionController {
     seed: number,
   ): ExpeditionController {
     const parsed: unknown = JSON.parse(json);
-    const migrated = migrateSaveBlobToCurrent(parsed) as SaveBlob;
-    const harbor = fromResourceBands(migrated.resources, storageSeed); // asserts 3S validity
-    assertClaimStateValid(migrated.claim_ledger, migrated.pending_reward_resolution);
+    const migrated = migrateSaveBlobToCurrent(parsed);
+    // Complete shared validation (H2): the precompiled schema validator + every
+    // semantic invariant — the SAME contract the Node save path enforces. Nothing
+    // is accepted into controller state until this passes (malformed non-
+    // expedition blocks, bad event identity, and tampered committed-command
+    // records are all refused here).
+    assertSaveBlobValid(migrated);
+    const blob: SaveBlob = migrated;
+    const harbor = fromResourceBands(blob.resources, storageSeed); // asserts 3S validity (defense in depth)
+    assertClaimStateValid(blob.claim_ledger, blob.pending_reward_resolution);
     const controller = new ExpeditionController(storageSeed, expeditionSeed, seed);
-    controller.template = migrated;
-    controller.domain = { expedition: migrated.expedition, harbor_operations: migrated.harbor_operations, harbor };
-    assertExpeditionDomainValid(controller.domain, expeditionSeed.content);
-    // Continue the command counter beyond any persisted id so a resumed session
-    // never reissues a committed command id (duplicate-command resistance).
-    controller.commandCounter = ExpeditionController.counterFloor(migrated.expedition.last_command_id);
+    controller.template = blob;
+    controller.domain = { expedition: blob.expedition, harbor_operations: blob.harbor_operations, harbor };
+    assertExpeditionDomainValid(controller.domain, expeditionSeed.content); // also checks the /data overflow cap
+    // Continue the command counter beyond every persisted committed id so a
+    // resumed session never reissues a committed command id (duplicate-command
+    // resistance across save/reload — H3).
+    controller.commandCounter = ExpeditionController.counterFloor(blob.expedition.committed_command_ids);
     controller.message = "Resumed the saved expedition exactly where it left off.";
     return controller;
   }
 
-  private static counterFloor(lastCommandId: string | null): number {
-    if (!lastCommandId) return 0;
-    const n = Number(lastCommandId.split(".").pop());
-    return Number.isFinite(n) ? n : 0;
+  /**
+   * The highest UI command-counter value embedded in the persisted committed
+   * command ids (`ui.<kind>.<counter>`), so a resumed session's next allocation
+   * is strictly greater than any id already committed (H3 — no reissue across
+   * save/reload, even though the record now holds many ids, not just the last).
+   */
+  private static counterFloor(committedCommandIds: readonly string[]): number {
+    let floor = 0;
+    for (const id of committedCommandIds) {
+      const n = Number(id.split(".").pop());
+      if (Number.isFinite(n) && n > floor) floor = n;
+    }
+    return floor;
   }
 }
 

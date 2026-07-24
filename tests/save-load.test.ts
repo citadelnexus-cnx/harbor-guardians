@@ -43,8 +43,9 @@ const validate = createSaveBlobValidator();
 const V1_FIXTURE_PATH = "tests/fixtures/save.v1.json";
 const V2_FIXTURE_PATH = "tests/fixtures/save.v2.json";
 const V3_FIXTURE_PATH = "tests/fixtures/save.v3.json";
+const V4_FIXTURE_PATH = "tests/fixtures/save.v4.json";
 
-const IDENTITY_EXPEDITION = { phase: "idle", active: null, next_expedition_index: 0, last_command_id: null };
+const IDENTITY_EXPEDITION = { phase: "idle", active: null, next_expedition_index: 0, committed_command_ids: [] };
 const IDENTITY_HARBOR_OPS = {
   overflow: {},
   canonical_intro_consumed: false,
@@ -218,7 +219,7 @@ test("migration: committed v2 fixture (with real A2 ledger content) migrates to 
   });
 });
 
-test("migration: the v1 fixture chains v1→v2→v3→v4 and equals a fresh current-version equivalent", () => {
+test("migration: the v1 fixture chains v1→v2→v3→v4→v5 and equals a fresh current-version equivalent", () => {
   withTempDir((dir) => {
     const slot = join(dir, "chained.save.json");
     copyFileSync(V1_FIXTURE_PATH, slot);
@@ -233,7 +234,7 @@ test("migration: the v1 fixture chains v1→v2→v3→v4 and equals a fresh curr
 
 // ── Save-schema migration v3 → v4 (Save/Load §14; A4 bump) ──────────────────
 
-test("migration: committed v3 fixture (with real A1–A3 content) migrates to v4 preserving every block exactly", () => {
+test("migration: committed v3 fixture (with real A1–A3 content) migrates to current (v5) preserving every block exactly", () => {
   withTempDir((dir) => {
     const slot = join(dir, "migrated-v3.save.json");
     copyFileSync(V3_FIXTURE_PATH, slot);
@@ -271,14 +272,110 @@ test("migration: a 'v3' save already carrying an expedition or harbor_operations
   assert.throws(() => migrateSaveBlobToCurrent({ ...v3, harbor_operations: IDENTITY_HARBOR_OPS }), SaveMigrationError);
 });
 
-test("migration: v3→v4 is idempotent — re-migrating a current-version save is a no-op", () => {
+test("migration: the chain is idempotent — re-migrating a current-version save is a no-op", () => {
   const current = createEmptySaveBlob({ game_version: "0.0.0", last_saved_utc: "2026-01-01T00:00:00.000Z" });
   assert.equal(current.meta.save_schema_version, SAVE_SCHEMA_VERSION);
   const again = migrateSaveBlobToCurrent(current) as SaveBlob;
   assert.equal(canonicalSerialize(again), canonicalSerialize(current), "a current-version save migrates to itself unchanged");
 });
 
-// ── S5/S7 @ A4 expedition-bearing proofs (SaveBlob v4) ──────────────────────
+// ── Save-schema migration v4 → v5 (Save/Load §14; post-A4 stabilization H3) ──
+
+test("migration: committed v4 fixture migrates to current (v5) preserving every A0–A4 block; idle committed-command record is empty", () => {
+  withTempDir((dir) => {
+    const slot = join(dir, "migrated-v4.save.json");
+    copyFileSync(V4_FIXTURE_PATH, slot);
+    const fixtureBytes = readFileSync(slot, "utf8");
+    const fixture = JSON.parse(fixtureBytes) as Record<string, unknown>;
+
+    const loaded = loadSave(slot, validate);
+    assert.equal(loaded.meta.save_schema_version, SAVE_SCHEMA_VERSION, "migrated save carries the current version");
+    // The v4 last_command_id ("ui.recover.9") is at IDLE, so the v5 record resets
+    // to empty (the completed lifecycle command is no longer relevant) — never
+    // carried into an idle record (which the v5 invariant forbids).
+    assert.deepEqual(loaded.expedition.committed_command_ids, [], "idle v4 last_command_id drops to an empty v5 record");
+    assert.equal(loaded.expedition.next_expedition_index, 2, "expedition index preserved");
+    assert.ok(!("last_command_id" in (loaded.expedition as unknown as Record<string, unknown>)), "the v4 last_command_id field is gone");
+
+    // Every A1–A4 block passes through byte-preserved (harbor_operations included).
+    for (const block of [
+      "resources",
+      "claim_ledger",
+      "pending_reward_resolution",
+      "events",
+      "harbor_operations",
+      "world_clock",
+      "threat",
+    ] as const) {
+      assert.equal(
+        canonicalSerialize(loaded[block]),
+        canonicalSerialize(fixture[block]),
+        `${block} preserved exactly through v4→v5`,
+      );
+    }
+    assert.equal(loaded.harbor_operations.completed_expeditions, 2, "harbor_operations count survived");
+    assert.equal(loaded.harbor_operations.route_anchor_operations_unlocked, true, "unlock flag survived");
+
+    // Loading never mutates the on-disk v4 file; re-saving round-trips.
+    assert.equal(readFileSync(slot, "utf8"), fixtureBytes, "load leaves the v4 file untouched");
+    saveAtomically(slot, loaded, { validate });
+    assert.equal(canonicalSerialize(loadSave(slot, validate)), canonicalSerialize(loaded), "re-saved migrated state round-trips");
+  });
+});
+
+test("migration: a mid-flight v4 save seeds the committed-command record from last_command_id (no invented history)", () => {
+  const v4 = JSON.parse(readFileSync(V4_FIXTURE_PATH, "utf8")) as Record<string, unknown>;
+  // A mid-flight (docked) v4 expedition with a real in-flight command id.
+  const midFlight = {
+    ...v4,
+    expedition: {
+      active: {
+        expedition_id: "exp.0",
+        expedition_seed: 20260714,
+        content_id: "exp.first_playable",
+        guardian_id: "gdn.raxa",
+        supplies_committed: {},
+        dispatched: true,
+        outcome: "full_success",
+        cargo_aboard: {},
+        vessel_condition: "ready",
+        crew_condition: "ready",
+        guardian_condition: "ready",
+        event: null,
+      },
+      last_command_id: "ui.unload.6",
+      next_expedition_index: 1,
+      phase: "docked",
+    },
+  };
+  const migrated = migrateSaveBlobToCurrent(midFlight) as SaveBlob;
+  assert.equal(migrated.meta.save_schema_version, SAVE_SCHEMA_VERSION);
+  assert.deepEqual(
+    migrated.expedition.committed_command_ids,
+    ["ui.unload.6"],
+    "the one in-flight committed id is carried forward — nothing invented, nothing else added",
+  );
+});
+
+test("migration: a 'v4' save already carrying committed_command_ids (impossible under the v4 schema) is refused", () => {
+  const v4 = JSON.parse(readFileSync(V4_FIXTURE_PATH, "utf8")) as Record<string, unknown>;
+  const poisoned = {
+    ...v4,
+    expedition: { ...(v4.expedition as Record<string, unknown>), committed_command_ids: ["smuggled"] },
+  };
+  assert.throws(() => migrateSaveBlobToCurrent(poisoned), SaveMigrationError);
+});
+
+test("migration: a 'v4' save with a malformed last_command_id is refused", () => {
+  const v4 = JSON.parse(readFileSync(V4_FIXTURE_PATH, "utf8")) as Record<string, unknown>;
+  const poisoned = {
+    ...v4,
+    expedition: { ...(v4.expedition as Record<string, unknown>), last_command_id: 42 },
+  };
+  assert.throws(() => migrateSaveBlobToCurrent(poisoned), SaveMigrationError);
+});
+
+// ── S5/S7 @ A4 expedition-bearing proofs (SaveBlob v5) ──────────────────────
 
 test("S5 @ A4: expedition-bearing round-trip proof (as wired into the harness) passes", () => {
   withTempDir((dir) => {

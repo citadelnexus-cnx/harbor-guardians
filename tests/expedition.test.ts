@@ -31,6 +31,7 @@ import { test } from "node:test";
 
 import type { CoreResource } from "../src/contracts/enums.js";
 import type { ExpeditionCommand, ExpeditionOutcome, StartingGuardianId } from "../src/contracts/expedition.js";
+import { COMMITTED_COMMAND_HISTORY_LIMIT } from "../src/contracts/expedition.js";
 import type { ExpeditionContent } from "../src/contracts/expedition-seed.js";
 import type { SaveBlob } from "../src/contracts/save-blob.js";
 import {
@@ -340,13 +341,122 @@ test("OPS1: cancellation blocks by default (supplies preserved) when the refund 
 
 // ── Duplicate-command resistance + malformed commands (brief §3/§11) ─────────
 
-test("duplicate-command resistance: re-applying the last command id is an idempotent no-op", () => {
+test("duplicate-command resistance: re-applying a committed command id is an idempotent no-op", () => {
   const prepared = run(fresh(), { command_id: "dup.prepare", kind: "prepare", guardian_id: "gdn.nova" });
   const again = applyCommand(prepared, { command_id: "dup.prepare", kind: "prepare", guardian_id: "gdn.nova" }, ctx);
   assert.equal(again.applied, false, "the duplicate is not applied");
   assert.ok(again.idempotent);
   assert.equal(again.domain.expedition.next_expedition_index, prepared.expedition.next_expedition_index, "no second expedition was created");
   assert.equal(canonicalSerialize(again.domain), canonicalSerialize(prepared), "the domain is byte-identical (no second effect)");
+});
+
+// ── H3: bounded committed-command replay protection ──────────────────────────
+
+test("H3 replay across intervening commands: a duplicate of an EARLIER docked command is a no-op after another command commits", () => {
+  // Docked with cargo aboard (raxa salvages Iron); the Harbor already holds seeded Iron.
+  let d = toDocked("gdn.raxa", "full_success", "h3");
+  const iron: CoreResource = "Iron";
+  const safeBefore = d.harbor.resources[iron].safe;
+  assert.ok(safeBefore > 0, "the seeded Harbor holds Safe Iron to jettison");
+  // A = a destructive jettison of 1 Iron from Safe (stays docked — NOT phase-guarded against replay).
+  const a = applyCommand(d, { command_id: "h3.jettison", kind: "jettison", resource: iron, band: "safe", amount: 1 }, ctx);
+  assert.ok(a.applied && a.jettisoned);
+  d = a.domain;
+  const safeAfterA = d.harbor.resources[iron].safe;
+  assert.equal(safeAfterA, safeBefore - 1, "the first jettison discarded exactly 1");
+  // B = an intervening, different command (unload) — also stays docked.
+  const b = applyCommand(d, { command_id: "h3.unload", kind: "unload" }, ctx);
+  assert.ok(b.applied);
+  d = b.domain;
+  // Replay A after B committed: the v4 build (last-command-only) would re-execute
+  // the jettison and discard a SECOND Iron; H3 recognizes the still-retained id
+  // and treats it as an idempotent no-op.
+  const replayA = applyCommand(d, { command_id: "h3.jettison", kind: "jettison", resource: iron, band: "safe", amount: 1 }, ctx);
+  assert.equal(replayA.applied, false, "the earlier command's replay is not applied");
+  assert.ok(replayA.idempotent);
+  assert.equal(replayA.domain.harbor.resources[iron].safe, d.harbor.resources[iron].safe, "no second discard occurred (destructive replay blocked)");
+  assert.equal(canonicalSerialize(replayA.domain), canonicalSerialize(d), "the domain is byte-identical after the blocked replay");
+});
+
+test("H3: the committed-command record is bounded (FIFO) and deterministic — capped at the limit, holding the most recent ids in order", () => {
+  let d = toDocked("gdn.raxa", "full_success", "cap");
+  const appended: string[] = [...d.expedition.committed_command_ids];
+  // Drain the hold first (stays docked), then spam harmless applied unload no-ops
+  // with DISTINCT ids to exceed the bound; each still records its command id.
+  for (let i = 0; i <= COMMITTED_COMMAND_HISTORY_LIMIT + 8; i++) {
+    const id = `cap.u${i}`;
+    d = run(d, { command_id: id, kind: "unload" });
+    appended.push(id);
+  }
+  assert.equal(
+    d.expedition.committed_command_ids.length,
+    COMMITTED_COMMAND_HISTORY_LIMIT,
+    "the record is capped at the bound (never unbounded)",
+  );
+  assert.deepEqual(
+    d.expedition.committed_command_ids,
+    appended.slice(-COMMITTED_COMMAND_HISTORY_LIMIT),
+    "the record is exactly the most recent N ids, oldest first (deterministic FIFO)",
+  );
+  assert.ok(!d.expedition.committed_command_ids.includes("cap.prepare"), "the oldest ids were evicted");
+});
+
+test("H3: the record resets per expedition — it is empty again once the expedition returns to idle", () => {
+  let d = fresh();
+  d = run(d, { command_id: "rst.prepare", kind: "prepare", guardian_id: "gdn.nova" });
+  assert.ok(d.expedition.committed_command_ids.length > 0, "the record fills during the expedition");
+  // Cancel back to idle (OPS1 refund) — the record resets.
+  const cancelled = applyCommand(d, { command_id: "rst.cancel", kind: "cancel" }, ctx);
+  assert.ok(cancelled.applied && !cancelled.cancellation_blocked);
+  assert.equal(cancelled.domain.expedition.phase, "idle");
+  assert.deepEqual(cancelled.domain.expedition.committed_command_ids, [], "the record is empty at idle (per-expedition reset)");
+});
+
+test("H3: the committed record persists across save/load and a replay stays a no-op after reload", () => {
+  let d = toDocked("gdn.tarin", "partial_success", "persist");
+  d = run(d, { command_id: "persist.unload", kind: "unload" });
+  const recordBefore = [...d.expedition.committed_command_ids];
+  // Round-trip the domain through the real SaveBlob save path.
+  const blob: SaveBlob = {
+    ...createEmptySaveBlob({ game_version: "0.0.0", last_saved_utc: "2026-05-05T00:00:00.000Z" }),
+    resources: toResourceBands(d.harbor),
+    expedition: d.expedition,
+    harbor_operations: d.harbor_operations,
+  };
+  const tmp = mkdtempSync(join(tmpdir(), "hg-h3-persist-"));
+  try {
+    const slot = join(tmp, "h3.save.json");
+    saveAtomically(slot, blob, { validate });
+    const loaded = loadSave(slot, validate);
+    assert.deepEqual(loaded.expedition.committed_command_ids, recordBefore, "the committed record survives save/load exactly");
+    const reloaded: ExpeditionDomain = {
+      expedition: loaded.expedition,
+      harbor_operations: loaded.harbor_operations,
+      harbor: fromResourceBands(loaded.resources, storageSeed),
+    };
+    // A replay of a persisted committed id is still a no-op after reload.
+    const replay = applyCommand(reloaded, { command_id: "persist.unload", kind: "unload" }, ctx);
+    assert.equal(replay.applied, false, "a persisted committed id is still recognized after reload");
+    assert.ok(replay.idempotent);
+  } finally {
+    rmSync(tmp, { recursive: true, force: true });
+  }
+});
+
+test("H3: a malformed committed-command record (duplicate ids) is rejected loudly", () => {
+  const d = toDocked("gdn.nova", "retreat", "mal");
+  const tampered: ExpeditionDomain = {
+    ...d,
+    expedition: { ...d.expedition, committed_command_ids: ["dup", "dup"] },
+  };
+  assert.throws(() => assertExpeditionDomainValid(tampered, content), ExpeditionInvariantError, "duplicate ids in the record are refused");
+  // And a non-empty record at idle is refused (per-expedition reset invariant).
+  const idleDirty: ExpeditionDomain = {
+    expedition: { ...createExpeditionState(), committed_command_ids: ["stray"] },
+    harbor_operations: createHarborOperationsState(),
+    harbor: createHarborState(storageSeed),
+  };
+  assert.throws(() => assertExpeditionDomainValid(idleDirty, content), ExpeditionInvariantError, "a non-empty record at idle is refused");
 });
 
 test("malformed commands and illegal transitions throw and leave the input unchanged", () => {

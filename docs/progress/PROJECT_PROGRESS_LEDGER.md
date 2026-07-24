@@ -32,7 +32,7 @@ This document tracks phase progress and authorization state across the whole pro
 | Alpha A2 | CLOSED |
 | Alpha A3 | CLOSED |
 | Alpha A4 | CLOSED — Option A implementation merged (PR #21 → `main` `08f84de`, 2026-07-23); owner interactive Windows acceptance PASS; 132/17/115; save v4 |
-| HG-POST-A4-STABILIZATION-01 (non-phase stabilization lane) | AUTHORIZATION RECORD IN REVIEW — owner authorization 2026-07-23; source audit HG-POST-A4-INDEPENDENT-CODE-REVIEW-01 (Blocking 0 / High 3 / Medium 3 / Low 2 / Accepted Alpha limitations 3); implementation NOT STARTED; not Alpha A5; adds no gameplay; A4 stays CLOSED |
+| HG-POST-A4-STABILIZATION-01 (non-phase stabilization lane) | IMPLEMENTED / IN REVIEW — owner authorization 2026-07-23; source audit HG-POST-A4-INDEPENDENT-CODE-REVIEW-01 (Blocking 0 / High 3 / Medium 3 / Low 2 / Accepted Alpha limitations 3); H1–H3 + M1–M2 implemented, M3 DEFERRED WITH RATIONALE; save schema **v5** (deterministic v4→v5 migration); invariant boundary unchanged (132/17/115); draft PR on `stabilization/post-a4-integrity-01` awaiting owner review; not Alpha A5; adds no gameplay; A4 stays CLOSED |
 | Alpha A5–A6 | FUTURE — NOT AUTHORIZED |
 | Beta | FUTURE |
 | Production | FUTURE |
@@ -130,18 +130,24 @@ This document tracks phase progress and authorization state across the whole pro
 
 ### HG-POST-A4-STABILIZATION-01 (non-phase stabilization lane)
 
-- **Status:** AUTHORIZATION RECORD IN REVIEW — **implementation NOT STARTED.**
+- **Status:** IMPLEMENTED / IN REVIEW — implementation complete on branch `stabilization/post-a4-integrity-01`; single draft PR open awaiting owner review. **Not closed** (closure requires an owner-approved merge + post-merge reconciliation).
 - **Classification:** A bounded **post-Alpha-A4 integrity and verification stabilization lane**, over the CLOSED Alpha A4 implementation. **It is not an Alpha phase; it is not Alpha A5; it authorizes no new player capability.** Alpha A4 remains **CLOSED**; Alpha A5+ remains **NOT AUTHORIZED**.
-- **Decision date:** 2026-07-23 (owner authorization).
+- **Decision date:** 2026-07-23 (owner authorization); implementation drafted 2026-07-24.
 - **Source audit:** HG-POST-A4-INDEPENDENT-CODE-REVIEW-01 — disposition Blocking **0** / High **3** (H1, H2, H3) / Medium **3** (M1, M2, M3) / Low **2** / Accepted Alpha limitations **3**.
 - **Controlling brief:** [`docs/stabilization/HG_POST_A4_STABILIZATION_01_EXECUTION_BRIEF_v0.1.md`](../stabilization/HG_POST_A4_STABILIZATION_01_EXECUTION_BRIEF_v0.1.md) (public-safe scope; authority from the private owner authorization record dated 2026-07-23, per `CLAUDE.md` §7).
-- **Baseline SHA:** `b4ff741a0e1ed4956e5eb3e2e2fabafe861a0b83` (`main` = `origin/main` at authorization time).
-- **Authorized remediation targets:** H1 — complete Alpha A4 CI gate; H2 — one unified `SaveBlob` validator enforced on both the Node and desktop paths; H3 — bounded, persisted, committed-command replay protection that survives intervening commands; M1 — controller semantic action-eligibility enforcement; M2 — pure, side-effect-free action enumeration; M3 — a narrow, tamper-safe protected-over-cap abstraction, implemented only under all its stated conditions or else DEFERRED WITH RATIONALE.
-- **Save-version boundary:** save schema **v5** + a deterministic **v4→v5** migration are conditionally authorized **only if technically required by H3**; otherwise replay protection must persist honestly under **v4** with no silent v4-contract mutation.
-- **Implemented invariants:** none (authorization record only). Expected default at implementation: **unchanged (132/17/115)** — stronger CI, unified validation, better command identity, and pure enumeration are not invariant conversions; any conversion requires a separate exact proof and owner review.
-- **Implementation branch (only after the authorization-record PR merges):** `stabilization/post-a4-integrity-01`. Single draft PR; the Implementer never marks ready and never merges.
-- **Remaining blocked scope:** all A4 hard exclusions, all Alpha A5+ scope, deployment, and production — unchanged. This lane adds no gameplay, routes, outposts, events, rewards, Guardians, party systems, Claim Ledger source types, networking, or packaging.
-- **Next authorization gate:** owner review and merge of the authorization-record PR (`docs/post-a4-stabilization-01-authorization`), after which implementation may begin on `stabilization/post-a4-integrity-01`.
+- **Authorization-record baseline:** `b4ff741a0e1ed4956e5eb3e2e2fabafe861a0b83`. **Implementation baseline:** `b762f0ba051ae8de3cf3b2bd03532cc511f6aaf6` (`main` = `origin/main` after the authorization-record PR #23 merged) — the point `stabilization/post-a4-integrity-01` forked from.
+- **Remediation disposition:**
+  - **H1 — IMPLEMENTED.** CI now runs the complete gate (typecheck, lint, schema + precompiled-validator drift, sim-harness, save/harbor/ledger/events/expedition/ui, generated-engine + UI-bundle drift, `ui:playthrough --check`, `cargo test`/`cargo build`). `.gitattributes` pins the byte-compared generated artifacts to LF (removes the documented Windows CRLF false-drift); the package description was refreshed.
+  - **H2 — IMPLEMENTED.** One precompiled, browser-safe `SaveBlob` validator generated from the committed schema (`src/save/generated/`, drift-guarded), plus a shared semantic module; both the Node save pipeline and the desktop/controller path validate through the same `assertSaveBlobValid` (before persistence and after migration on load).
+  - **H3 — IMPLEMENTED.** The v4 `last_command_id` (last-command-only) is replaced by a bounded, per-expedition `committed_command_ids` record that rejects a duplicate even after intervening commands; bounded twice over (per-expedition reset + FIFO cap `COMMITTED_COMMAND_HISTORY_LIMIT = 64`); persisted in **save schema v5**.
+  - **M1 — IMPLEMENTED.** The controller refuses any submitted action that does not match a currently-offered semantic descriptor (stale/fabricated/altered/out-of-mode); the sim phase/domain guards remain as defense in depth.
+  - **M2 — IMPLEMENTED.** `view()`/`availableActions()` are side-effect free; command ids are allocated only on select/commit, never during enumeration.
+  - **M3 — DEFERRED WITH RATIONALE.** A4 has no runtime capacity-lowering mechanic, so a legitimate over-cap holding cannot arise; distinguishing legitimate over-cap provenance from tampered state would require capacity-history infrastructure (explicitly excluded), and a trust-any-over-cap field would admit tampered value inflation. Future prerequisite: a runtime capacity-change mechanic that can legitimately produce over-cap holdings (none authorized). No code was written for M3.
+- **Save-version decision:** H3 introduces a new authoritative persisted field, so **v5 was technically required.** One deterministic **v4→v5** migration seeds the record from the single known v4 `last_command_id` (inventing no history), preserves every A0–A4 block, refuses tampered/impossible v4 claims, and chains v1→v2→v3→v4→v5; a canonical **v4 fixture** is committed. No silent v4-contract mutation.
+- **Implemented invariants:** none newly converted. Invariant boundary **unchanged: 132 registered / 17 implemented / 115 fail-loud.** Stronger CI, unified validation, the committed-command record, and pure enumeration are not invariant conversions (per the brief's §8 boundary); S5/S7 proofs were extended to the v5 round-trip without claiming a new conversion.
+- **Verification (implementer, headless):** typecheck 0 · lint 0 warnings · schema:validate (incl. H2 validator drift) green · sim:harness A4 BATCH GREEN (132/17/115, determinism byte-identical @ seed 20260714) · test:save · test:harbor · test:ledger · test:events · test:expedition · test:ui all green · generated-engine + UI-bundle drift clean · `ui:playthrough --check` no drift · `cargo test --locked` · `cargo build --locked` green.
+- **Remaining blocked scope:** all A4 hard exclusions, all Alpha A5+ scope, deployment, and production — unchanged. This lane added no gameplay, routes, outposts, events, rewards, Guardians, party systems, Claim Ledger source types, networking, or packaging.
+- **Next authorization gate:** owner review, promotion, and merge of the single draft PR on `stabilization/post-a4-integrity-01`, then post-merge reconciliation. The Implementer does not mark the PR ready and does not merge (`CLAUDE.md` §4).
 
 ### Alpha A5 / A6
 

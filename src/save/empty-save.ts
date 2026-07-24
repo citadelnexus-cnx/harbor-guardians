@@ -45,7 +45,7 @@ export function createEmptySaveBlob(args: EmptySaveArgs): SaveBlob {
     claim_ledger: { packages: [], story_claims: [] },
     pending_reward_resolution: [],
     events: [],
-    expedition: { phase: "idle", active: null, next_expedition_index: 0, last_command_id: null },
+    expedition: { phase: "idle", active: null, next_expedition_index: 0, committed_command_ids: [] },
     harbor_operations: {
       overflow: {},
       canonical_intro_consumed: false,

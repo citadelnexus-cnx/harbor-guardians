@@ -1,0 +1,128 @@
+{
+  "buildings": [],
+  "claim_ledger": {
+    "packages": [
+      {
+        "contents": {
+          "cosmetics": [],
+          "flags": [],
+          "gear_refs": [],
+          "resources": {
+            "Crowns": 500
+          }
+        },
+        "created_world_clock": {
+          "day_index": 0,
+          "time_of_day": 0
+        },
+        "held_remainder": {
+          "Crowns": 200
+        },
+        "is_story": false,
+        "package_id": "fixture.pkg.crowns",
+        "source_type": "test_supplied",
+        "system_grant": false
+      }
+    ],
+    "story_claims": [
+      {
+        "claim_id": "fixture.story",
+        "contents": {
+          "cosmetics": [],
+          "flags": [],
+          "gear_refs": [],
+          "resources": {
+            "Provisions": 150
+          }
+        },
+        "created_world_clock": {
+          "day_index": 0,
+          "time_of_day": 0
+        },
+        "is_story": true,
+        "source_type": "test_supplied"
+      }
+    ]
+  },
+  "events": [
+    {
+      "event_id": "fixture.evt",
+      "instance_id": "fixture.evt.inst",
+      "selected_outcome_id": null,
+      "staged_effects": [],
+      "state": "DORMANT"
+    }
+  ],
+  "flags_story": {},
+  "guardian_bond": null,
+  "harbor_operations": {
+    "canonical_intro_consumed": true,
+    "completed_expeditions": 2,
+    "overflow": {},
+    "route_anchor_operations_unlocked": true
+  },
+  "expedition": {
+    "active": null,
+    "last_command_id": "ui.recover.9",
+    "next_expedition_index": 2,
+    "phase": "idle"
+  },
+  "merit": {},
+  "meta": {
+    "game_version": "0.0.0",
+    "last_saved_utc": "2026-01-04T00:00:00.000Z",
+    "save_schema_version": 4
+  },
+  "pending_reward_resolution": [
+    {
+      "allowed_resolution_actions": [
+        "deliver_to_ledger"
+      ],
+      "blocking_reason": "per_resource_cap:Iron",
+      "created_world_clock": {
+        "day_index": 0,
+        "time_of_day": 0
+      },
+      "generated_reward_seed": 7,
+      "package_contents": {
+        "cosmetics": [],
+        "flags": [],
+        "gear_refs": [],
+        "resources": {
+          "Iron": 300
+        }
+      },
+      "pending_id": "fixture.pending",
+      "related_system_message_id": null,
+      "source_event_id": "fixture.event",
+      "source_type": "test_supplied"
+    }
+  ],
+  "resources": {
+    "Aether": {
+      "exposed": 400,
+      "safe": 200
+    },
+    "Crowns": {
+      "exposed": 1000,
+      "safe": 500
+    },
+    "Iron": {
+      "exposed": 600,
+      "safe": 300
+    },
+    "Provisions": {
+      "exposed": 600,
+      "safe": 300
+    }
+  },
+  "system_messages": [],
+  "threat": {
+    "phase": "calm"
+  },
+  "workers": [],
+  "world_clock": {
+    "day_index": 0,
+    "time_of_day": 0
+  }
+}

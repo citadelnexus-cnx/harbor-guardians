@@ -1,13 +1,20 @@
-# Harbor Guardians — CI gate (M0 Step 9).
+# Harbor Guardians — CI gate.
 # Governing docs: M0 packet §4 (CI on every push: typecheck → lint → schema
 # validation → sim-harness; red CI blocks merge) + §8 (harness/save-load in CI)
 # + §7/DC5 (a /data file that fails its schema blocks the build, including
-# proof that the deliberate negative fixture is rejected).
+# proof that the deliberate negative fixture is rejected);
+# HG_POST_A4_STABILIZATION_01_EXECUTION_BRIEF §7 (H1 — CI must execute the
+# COMPLETE Alpha A4 verification suite, so no part of it can silently rot).
 #
-# Headless only: no GUI window is opened; `cargo check` compiles the Tauri
-# shell without running it. No secrets are read; no artifacts are published;
-# nothing deploys. windows-latest mirrors the owner's verified Windows/MSVC
-# environment (M0 packet §5: "CI mirrors these versions so local and CI agree").
+# As of HG-POST-A4-STABILIZATION-01 (H1) CI runs the full gate: typecheck, lint,
+# schema + precompiled-validator drift, sim-harness, EVERY test suite
+# (save/harbor/ledger/events/expedition/ui), the generated browser-engine
+# build/drift check + ui:playthrough drift, and `cargo test`/`cargo build`
+# (the persistence bridge + the desktop crate compiling with the embedded
+# frontend). Headless only: no GUI window is opened; no secrets are read; no
+# artifacts are published; nothing deploys. windows-latest mirrors the owner's
+# verified Windows/MSVC environment (M0 packet §5: "CI mirrors these versions so
+# local and CI agree").
 name: ci
 
 on:
@@ -48,13 +55,13 @@ jobs:
       - name: Lint
         run: pnpm run lint
 
-      - name: Schema validation (D39 drift guard + DC4/DC5, broken fixture must be rejected)
+      - name: Schema + precompiled-validator drift (D39 + H2 drift guards + DC4/DC5, broken fixture must be rejected)
         run: pnpm run schema:validate
 
-      - name: Sim-harness smoke (headless, fixed seeds)
+      - name: Sim-harness smoke (headless, fixed seeds; 132/17/115 + determinism)
         run: pnpm run sim:harness
 
-      - name: Save/load tests (S7 atomic save + S5 empty/stocked/ledger round-trips + v1→v2→v3 migrations)
+      - name: Save/load tests (S7 atomic save + S5 round-trips + v1→v2→v3→v4→v5 migrations, H3 replay)
         run: pnpm run test:save
 
       - name: Harbor-state tests (A1 resource spine — 3S separation, hard stop, no hidden loss, DC6)
@@ -66,6 +73,21 @@ jobs:
       - name: Event-lifecycle tests (A3 skeleton — transitions, determinism, EVT3 persistence, inert effects)
         run: pnpm run test:events
 
+      - name: Expedition tests (A4 scenario matrix + OPS1 + H3 bounded replay protection)
+        run: pnpm run test:expedition
+
+      - name: UI controller tests (interactive flow, H2 desktop validation, M1 action authority, M2 pure enumeration)
+        run: pnpm run test:ui
+
+      - name: Rebuild generated browser engine + UI data bundles (deterministic)
+        run: pnpm run ui:build
+
+      - name: Generated-engine + UI-bundle drift guard (committed outputs must match a fresh build)
+        run: git diff --exit-code -- src/ui/shell/engine src/ui/shell/seeds.json src/ui/shell/playthrough.json
+
+      - name: UI playthrough drift check (seeds + transcript match the sim, byte-exact)
+        run: pnpm run ui:playthrough -- --check
+
       - name: Rust toolchain versions (runner-preinstalled stable/MSVC)
         run: |
           rustc --version
@@ -76,6 +98,10 @@ jobs:
         with:
           workspaces: src-tauri
 
-      - name: Tauri shell compile check (headless; no window, no bundle)
-        run: cargo check --locked
+      - name: Persistence-bridge tests (atomic temp→fsync→rename)
+        run: cargo test --locked
+        working-directory: src-tauri
+
+      - name: Tauri desktop crate build (headless; compiles with the embedded interactive frontend; no window, no bundle)
+        run: cargo build --locked
         working-directory: src-tauri

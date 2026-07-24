@@ -36,6 +36,16 @@
  *     numbers here — these are player STATE; A4 content lives in the /data
  *     expedition seed (DC1). The Claim Ledger blocks are UNTOUCHED by A4 (no
  *     new source_type, no reward generation — A4 exclusions).
+ *   - Post-A4 stabilization (v5 — owner HG-POST-A4-STABILIZATION-01
+ *     authorization 2026-07-23, H3): the `expedition` block's v4
+ *     `last_command_id: string | null` (which remembered only the immediately
+ *     previous command) is replaced by `committed_command_ids: string[]` — a
+ *     bounded, insertion-ordered, per-expedition committed-command record so a
+ *     duplicate command is rejected even after intervening commands. This is
+ *     the only shape change; the deterministic v4→v5 migration (committed v4
+ *     fixture + round-trip test) seeds the record from the single known v4
+ *     last_command_id (inventing no prior history) and preserves every other
+ *     A0–A4 block byte-for-byte. No new gameplay, no new player capability.
  *   - `combat_suspend?` (optional in §16) is deliberately absent until the
  *     D16/C8 combat-suspend feature lands; its migration adds it.
  *
@@ -66,9 +76,11 @@ import type { ExpeditionState, HarborOperationsState } from "./expedition.js";
  * (Save/Load §14; the M6 Migration Notice is FUTURE BUILD with the inbox).
  * v1 = M0/A1 empty-ledger shell · v2 = A2 claim_ledger + pending blocks ·
  * v3 = A3 events block (lifecycle instances, inert effects) ·
- * v4 = A4 expedition + harbor_operations blocks (first playable loop).
+ * v4 = A4 expedition + harbor_operations blocks (first playable loop) ·
+ * v5 = post-A4 stabilization H3 (bounded committed-command record replaces
+ * the v4 last_command_id).
  */
-export const SAVE_SCHEMA_VERSION = 4;
+export const SAVE_SCHEMA_VERSION = 5;
 
 /** Save/Load §1/§2: versions + absolute UTC timestamp (ISO-8601). */
 export interface SaveMeta {
